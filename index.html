@@ -39,20 +39,29 @@ const DATA_URL = "./data.json";
 
 function computeCycleDays(cycleStart, cycleEnd) {
   const now = new Date();
-  const start = new Date(cycleStart);
-  const end = new Date(cycleEnd);
+  let start = new Date(cycleStart);
+  let end = new Date(cycleEnd);
+
+  // Auto-advance: if today is past cycleEnd, roll forward month by month
+  while(now >= end) {
+    start = new Date(end);
+    end = new Date(end);
+    end.setMonth(end.getMonth() + 1);
+  }
+
+  const fmt = d => d.toISOString().split("T")[0];
   const totalDays = Math.round((end - start) / 86400000);
   const daysElapsed = Math.min(Math.max(Math.round((now - start) / 86400000), 1), totalDays);
   const daysRemaining = Math.max(totalDays - daysElapsed, 0);
-  return { totalDays, daysElapsed, daysRemaining };
+  return { totalDays, daysElapsed, daysRemaining, cycleStart: fmt(start), cycleEnd: fmt(end) };
 }
 
 const CYCLE_START = "2026-03-15";
 const CYCLE_END = "2026-04-15";
-const { totalDays, daysElapsed, daysRemaining } = computeCycleDays(CYCLE_START, CYCLE_END);
+const { totalDays, daysElapsed, daysRemaining, cycleStart: CS, cycleEnd: CE } = computeCycleDays(CYCLE_START, CYCLE_END);
 
 const DEFAULTS = {
-  balance: 584.94, cycleTarget: 1000, cycleStart: CYCLE_START, cycleEnd: CYCLE_END,
+  balance: 584.94, cycleTarget: 1000, cycleStart: CS, cycleEnd: CE,
   daysElapsed, daysRemaining, totalDays, monthlyIncome: 4761.80, loanPayment: 3450,
   fixed: {"Student Loans":3450,"Insurance":160.75,"Phone":32.50,"Amazon Prime":15.89,"Paramount+":13.77,"ChatGPT":20,"Apple iCloud":0.99,"Microsoft 365":8.33,"Claude Pro":17},
   loans: [
@@ -853,7 +862,9 @@ function App() {
       const saved = await loadState();
       if(saved) {
         const fresh = computeCycleDays(saved.cycleStart||CYCLE_START, saved.cycleEnd||CYCLE_END);
-        setData({...saved, ...fresh});
+        // If cycle rolled over, reset balance and transactions for new cycle
+        const newCycle = fresh.cycleStart !== saved.cycleStart;
+        setData({...saved, ...fresh, ...(newCycle ? {balance:0, transactions:[]} : {})});
       }
       try { const r=await fetch(DATA_URL); if(r.ok){const d=await r.json();const fresh=computeCycleDays(d.cycleStart||CYCLE_START,d.cycleEnd||CYCLE_END);setData({...d,...fresh});} } catch{}
 
