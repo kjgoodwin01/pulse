@@ -495,22 +495,20 @@ function Home({data,onUpdate,onAddTransaction,onImportTransactions}) {
         </div>
       </G>
       <div className="mt-5 mb-1 flex items-center justify-between"><span className="text-[10px] font-bold tracking-[0.2em]" style={{color:C.dim}}>RECENT</span></div>
-      {data.transactions.slice(0,3).map((t,i)=>(
-        <div key={i} className="flex items-center py-3" style={{borderBottom:i<2?`1px solid ${C.border}`:"none"}}>
+      {data.transactions.slice(0,5).map((t,i)=>(
+        <div key={i} className="flex items-center py-3" style={{borderBottom:i<4?`1px solid ${C.border}`:"none"}}>
           <div className="w-8 h-8 rounded-xl flex items-center justify-center mr-3" style={{background:`${C.cats[t.cat]||C.muted}15`}}><div className="w-2 h-2 rounded-full" style={{background:C.cats[t.cat]||C.muted}}/></div>
           <div className="flex-1 min-w-0"><p className="text-sm text-gray-300 truncate">{t.desc}</p><p className="text-[10px]" style={{color:C.muted}}>{t.cat}</p></div>
           <span className="text-sm font-bold text-white ml-2" style={{fontFamily:"'JetBrains Mono',monospace"}}>{$(t.amount)}</span>
         </div>
       ))}
 
-      {/* ── ADD MENU ── */}
-      <div className="flex justify-end mt-4 mb-2">
-        <button onClick={()=>setMenuOpen(true)}
-          className="w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-95"
-          style={{background:`linear-gradient(135deg,${C.blue},${C.purple})`,boxShadow:`0 0 30px -5px ${C.blue}60`}}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        </button>
-      </div>
+      {/* FAB — fixed, 8px above nav bar */}
+      <button onClick={()=>setMenuOpen(true)}
+        className="fixed right-5 z-40 w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-95"
+        style={{bottom:"calc(env(safe-area-inset-bottom) + 56px + 8px)",background:`linear-gradient(135deg,${C.blue},${C.purple})`,boxShadow:`0 0 30px -5px ${C.blue}60`}}>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
 
       {/* Add Menu Modal */}
       <Modal open={menuOpen} onClose={()=>setMenuOpen(false)} title="Add Transactions">
