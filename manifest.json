@@ -2,7 +2,7 @@
   "name": "Pulse — Financial Health",
   "short_name": "Pulse",
   "description": "The heartbeat of your financial health",
-  "start_url": "/",
+  "start_url": "/pulse/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#050A14",
@@ -22,7 +22,7 @@
     }
   ],
   "share_target": {
-    "action": "/",
+    "action": "/pulse/",
     "method": "GET",
     "params": {
       "text": "text"

@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-title" content="Pulse" />
   <title>Pulse</title>
 
-  <link rel="manifest" href="/manifest.json" />
+  <link rel="manifest" href="/pulse/manifest.json" />
 
   <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -41,7 +41,7 @@
     // Register service worker for PWA
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(() => {});
+        navigator.serviceWorker.register('/pulse/sw.js').catch(() => {});
       });
     }
   </script>

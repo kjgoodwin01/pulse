@@ -1,5 +1,5 @@
 const CACHE = "pulse-v1";
-const ASSETS = ["/", "/index.html", "/Pulse.jsx", "/manifest.json"];
+const ASSETS = ["/pulse/", "/pulse/index.html", "/pulse/Pulse.jsx", "/pulse/manifest.json"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
