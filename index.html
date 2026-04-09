@@ -267,10 +267,173 @@ function sim(loans,pmt) {
    TABS
    ═════════════════════════════════════════════════════════════════════════════ */
 
+// ── SCAN MODAL ───────────────────────────────────────────────────────────────
+function ScanModal({mode, onClose, onImport}) {
+  const [status,setStatus]=useState("idle"); // idle | processing | done | error
+  const [preview,setPreview]=useState(null);
+  const [parsed,setParsed]=useState([]);
+  const [errorMsg,setErrorMsg]=useState("");
+  const fileRef=useRef();
+
+  const processImage=async(file)=>{
+    if(!getApiKey()){setErrorMsg("No API key set. Go to Settings → Anthropic API Key.");setStatus("error");return;}
+    setStatus("processing");
+    try {
+      const b64=await new Promise((res,rej)=>{
+        const r=new FileReader();
+        r.onload=()=>res(r.result.split(",")[1]);
+        r.onerror=rej;
+        r.readAsDataURL(file);
+      });
+      setPreview(URL.createObjectURL(file));
+
+      const resp=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","x-api-key":getApiKey(),"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+        body:JSON.stringify({
+          model:"claude-sonnet-4-20250514",
+          max_tokens:1000,
+          messages:[{
+            role:"user",
+            content:[
+              {type:"image",source:{type:"base64",media_type:file.type||"image/jpeg",data:b64}},
+              {type:"text",text:`Extract all transactions from this Discover card statement or transaction list image.
+Return ONLY a JSON array, no other text. Each object must have:
+- "date": "YYYY-MM-DD" (use current year 2026 if year not visible)
+- "desc": merchant name in UPPERCASE
+- "amount": number (positive, no dollar sign)
+
+Example: [{"date":"2026-03-24","desc":"CHICK-FIL-A #03842","amount":12.45}]
+
+If no transactions are visible, return an empty array [].`}
+            ]
+          }]
+        })
+      });
+
+      const d=await resp.json();
+      const text=d.content?.[0]?.text||"[]";
+      const clean=text.replace(/```json|```/g,"").trim();
+      const txns=JSON.parse(clean);
+
+      // Auto-categorize each transaction
+      const categorized=txns.map(t=>({...t,cat:autoCat(t.desc)}));
+      setParsed(categorized);
+      setStatus("done");
+    } catch(e) {
+      console.error(e);
+      setErrorMsg("Couldn't parse the image. Try a clearer photo.");
+      setStatus("error");
+    }
+  };
+
+  const handleFile=(e)=>{
+    const file=e.target.files?.[0];
+    if(file) processImage(file);
+  };
+
+  const handleImport=()=>{
+    onImport(parsed);
+  };
+
+  if(!mode) return null;
+  return (
+    <div className="fixed inset-0 z-[100] flex items-end justify-center" onClick={status==="idle"?onClose:undefined}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"/>
+      <div className="relative w-full max-w-lg rounded-t-3xl overflow-hidden" style={{background:"#0c1222",border:`1px solid rgba(255,255,255,0.05)`,borderBottom:"none",maxHeight:"90vh"}}
+        onClick={e=>e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4" style={{borderBottom:`1px solid rgba(255,255,255,0.05)`}}>
+          <span className="text-sm font-bold text-white">{mode==="camera"?"Scan Statement":"Upload Screenshot"}</span>
+          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400" style={{background:"rgba(255,255,255,0.05)"}}>✕</button>
+        </div>
+        <div className="px-5 py-5 overflow-y-auto" style={{maxHeight:"calc(90vh - 60px)"}}>
+
+          {status==="idle"&&(
+            <div>
+              <div onClick={()=>fileRef.current?.click()} className="flex flex-col items-center justify-center rounded-2xl cursor-pointer transition active:scale-[0.98]"
+                style={{background:"rgba(255,255,255,0.03)",border:"1.5px dashed rgba(255,255,255,0.1)",padding:"48px 24px"}}>
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style={{background:mode==="camera"?"rgba(59,130,246,0.15)":"rgba(0,200,150,0.15)"}}>
+                  {mode==="camera"
+                    ? <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={C.blue} strokeWidth="1.6"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                    : <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#00c896" strokeWidth="1.6"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  }
+                </div>
+                <p className="text-sm font-semibold text-white mb-1">{mode==="camera"?"Take a Photo":"Choose from Library"}</p>
+                <p className="text-xs text-center" style={{color:C.muted}}>Point at your Discover app, statement, or any transaction list</p>
+              </div>
+              <input ref={fileRef} type="file" accept="image/*" capture={mode==="camera"?"environment":undefined}
+                onChange={handleFile} style={{display:"none"}}/>
+            </div>
+          )}
+
+          {status==="processing"&&(
+            <div className="flex flex-col items-center py-10">
+              {preview&&<img src={preview} alt="" className="w-full rounded-xl mb-5 opacity-40" style={{maxHeight:"180px",objectFit:"cover"}}/>}
+              <div className="w-10 h-10 rounded-full border-2 border-transparent mb-4" style={{borderTopColor:C.blue,animation:"spin 0.8s linear infinite"}}/>
+              <p className="text-sm font-semibold text-white">Scanning transactions…</p>
+              <p className="text-xs mt-1" style={{color:C.muted}}>Claude is reading your image</p>
+              <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+            </div>
+          )}
+
+          {status==="error"&&(
+            <div className="flex flex-col items-center py-8">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center mb-4" style={{background:"rgba(248,113,113,0.15)"}}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={C.red} strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              </div>
+              <p className="text-sm font-semibold text-white mb-1">Scan Failed</p>
+              <p className="text-xs text-center mb-5" style={{color:C.muted}}>{errorMsg}</p>
+              <Btn onClick={()=>setStatus("idle")} color={C.surface}>Try Again</Btn>
+            </div>
+          )}
+
+          {status==="done"&&(
+            <div>
+              {preview&&<img src={preview} alt="" className="w-full rounded-xl mb-4 opacity-60" style={{maxHeight:"140px",objectFit:"cover"}}/>}
+              {parsed.length===0?(
+                <div className="text-center py-6">
+                  <p className="text-sm text-white mb-1">No transactions found</p>
+                  <p className="text-xs mb-4" style={{color:C.muted}}>Try a clearer image showing transaction amounts and merchants</p>
+                  <Btn onClick={()=>setStatus("idle")} color={C.surface}>Try Again</Btn>
+                </div>
+              ):(
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-bold tracking-wider" style={{color:C.dim}}>FOUND {parsed.length} TRANSACTION{parsed.length>1?"S":""}</span>
+                    <span className="text-xs font-bold" style={{color:C.emerald,fontFamily:"'JetBrains Mono',monospace"}}>
+                      {$(parsed.reduce((s,t)=>s+t.amount,0))}
+                    </span>
+                  </div>
+                  <div className="rounded-2xl overflow-hidden mb-4" style={{border:`1px solid ${C.border}`}}>
+                    {parsed.map((t,i)=>(
+                      <div key={i} className="flex items-center gap-3 px-4 py-3" style={{borderBottom:i<parsed.length-1?`1px solid ${C.border}`:"none"}}>
+                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{background:C.cats[t.cat]||C.muted}}/>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-white truncate">{t.desc}</p>
+                          <p className="text-[10px]" style={{color:C.muted}}>{t.cat} · {t.date}</p>
+                        </div>
+                        <span className="text-xs font-bold text-white" style={{fontFamily:"'JetBrains Mono',monospace"}}>{$(t.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <Btn full onClick={handleImport} color={C.emerald}>Import All {parsed.length} Transactions</Btn>
+                  <button onClick={()=>setStatus("idle")} className="w-full mt-2 py-3 text-sm" style={{color:C.muted}}>Scan Again</button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── HOME ─────────────────────────────────────────────────────────────────────
 function Home({data,onUpdate,onAddTransaction}) {
   const [editing,setEditing]=useState(false);const [tmp,setTmp]=useState("");
+  const [menuOpen,setMenuOpen]=useState(false);
   const [quickOpen,setQuickOpen]=useState(false);
+  const [scanOpen,setScanOpen]=useState(null);
   const [quick,setQuick]=useState({amount:"",desc:"",cat:"Dining"});
   const spent=data.balance;const rem=data.cycleTarget-spent;const safe=Math.max(0,rem/data.daysRemaining);
   const safeW=Math.min(safe*7,rem);const burn=spent/data.daysElapsed;const pace=data.cycleTarget/data.totalDays;const proj=burn*data.totalDays;
@@ -321,17 +484,53 @@ function Home({data,onUpdate,onAddTransaction}) {
         </div>
       ))}
 
-      {/* Floating Add Button — inline so it scrolls with content, sits below recent */}
+      {/* ── ADD MENU ── */}
       <div className="flex justify-end mt-4 mb-2">
-        <button onClick={()=>setQuickOpen(true)}
-          className="w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all active:scale-95"
+        <button onClick={()=>setMenuOpen(true)}
+          className="w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-95"
           style={{background:`linear-gradient(135deg,${C.blue},${C.purple})`,boxShadow:`0 0 30px -5px ${C.blue}60`}}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </button>
       </div>
 
+      {/* Add Menu Modal */}
+      <Modal open={menuOpen} onClose={()=>setMenuOpen(false)} title="Add Transactions">
+        <div className="space-y-3 pb-2">
+          <button onClick={()=>{setMenuOpen(false);setScanOpen("camera");}} className="w-full flex items-center gap-4 p-4 rounded-xl transition active:scale-[0.98]" style={{background:"rgba(59,130,246,0.08)",border:"1px solid rgba(59,130,246,0.15)"}}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{background:"rgba(59,130,246,0.15)"}}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.blue} strokeWidth="1.8"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-semibold text-white">Scan Statement</p>
+              <p className="text-[11px] mt-0.5" style={{color:C.muted}}>Point camera at Discover transactions</p>
+            </div>
+          </button>
+          <button onClick={()=>{setMenuOpen(false);setScanOpen("upload");}} className="w-full flex items-center gap-4 p-4 rounded-xl transition active:scale-[0.98]" style={{background:"rgba(0,200,150,0.08)",border:"1px solid rgba(0,200,150,0.15)"}}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{background:"rgba(0,200,150,0.15)"}}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00c896" strokeWidth="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-semibold text-white">Upload Screenshot</p>
+              <p className="text-[11px] mt-0.5" style={{color:C.muted}}>Import from photo library</p>
+            </div>
+          </button>
+          <button onClick={()=>{setMenuOpen(false);setQuickOpen(true);}} className="w-full flex items-center gap-4 p-4 rounded-xl transition active:scale-[0.98]" style={{background:C.surface,border:`1px solid ${C.border}`}}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{background:"rgba(255,255,255,0.05)"}}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="1.8"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-semibold text-white">Manual Entry</p>
+              <p className="text-[11px] mt-0.5" style={{color:C.muted}}>Type in a single transaction</p>
+            </div>
+          </button>
+        </div>
+      </Modal>
+
+      {/* Vision Scanner Modal */}
+      {scanOpen&&<ScanModal mode={scanOpen} onClose={()=>setScanOpen(null)} onImport={(txns)=>{txns.forEach(t=>onAddTransaction(t));setScanOpen(null);}}/>}
+
       {/* Quick Add Modal */}
-      <Modal open={quickOpen} onClose={()=>setQuickOpen(false)} title="Quick Add Transaction">
+      <Modal open={quickOpen} onClose={()=>setQuickOpen(false)} title="Manual Entry">
         <Input label="AMOUNT" type="number" value={quick.amount} onChange={v=>setQuick({...quick,amount:v})} placeholder="12.45"/>
         <Input label="MERCHANT" value={quick.desc} onChange={v=>setQuick({...quick,desc:v,cat:autoCat(v)})} placeholder="Chick-fil-A #03842"/>
         <div className="mb-3">
@@ -549,7 +748,81 @@ const NAV=[
   {id:"vel",l:"Velocity",i:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>},
   {id:"loan",l:"Loans",i:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>},
   {id:"hp",l:"Health",i:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>},
+  {id:"settings",l:"Settings",i:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>},
 ];
+
+// ── API KEY HELPERS ───────────────────────────────────────────────────────────
+function getApiKey() { try { return localStorage.getItem("pulse-api-key")||""; } catch { return ""; } }
+function setApiKey(k) { try { localStorage.setItem("pulse-api-key", k); } catch {} }
+
+// ── SETTINGS TAB ─────────────────────────────────────────────────────────────
+function SettingsTab({data,onUpdate}) {
+  const [key,setKey]=useState(getApiKey);
+  const [saved,setSaved]=useState(false);
+  const [show,setShow]=useState(false);
+
+  const handleSave=()=>{
+    setApiKey(key.trim());
+    setSaved(true);
+    setTimeout(()=>setSaved(false),2000);
+  };
+
+  return (
+    <S className="px-5 pb-10">
+      <G className="mt-5" p="p-5">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{background:"rgba(59,130,246,0.12)"}}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.blue} strokeWidth="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          </div>
+          <div>
+            <p className="text-sm font-bold text-white">Anthropic API Key</p>
+            <p className="text-[11px]" style={{color:C.muted}}>Required for Scan & Upload features</p>
+          </div>
+        </div>
+        <div className="relative mb-3">
+          <input
+            type={show?"text":"password"}
+            value={key}
+            onChange={e=>setKey(e.target.value)}
+            placeholder="sk-ant-api03-..."
+            className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 outline-none pr-12"
+            style={{background:"rgba(255,255,255,0.04)",border:`1px solid ${C.border}`,fontFamily:"'JetBrains Mono',monospace",fontSize:"12px"}}
+          />
+          <button onClick={()=>setShow(!show)} className="absolute right-3 top-1/2 -translate-y-1/2 p-1" style={{color:C.muted}}>
+            {show
+              ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            }
+          </button>
+        </div>
+        <Btn full onClick={handleSave} color={saved?C.emerald:C.blue}>
+          {saved?"✓ Saved":"Save API Key"}
+        </Btn>
+        <p className="text-[10px] mt-3 text-center leading-relaxed" style={{color:C.dim}}>
+          Stored on this device only. Never sent to GitHub or any server other than Anthropic's API.
+        </p>
+      </G>
+
+      <G className="mt-3" p="p-5">
+        <p className="text-[10px] font-bold tracking-[0.2em] mb-3" style={{color:C.dim}}>CYCLE SETTINGS</p>
+        {[["Cycle Start",data.cycleStart],["Cycle End",data.cycleEnd],["Monthly Budget",`$${data.cycleTarget}`],["Monthly Income",`$${data.monthlyIncome}`]].map(([l,v])=>(
+          <div key={l} className="flex justify-between py-2.5" style={{borderBottom:`1px solid ${C.border}`}}>
+            <span className="text-xs" style={{color:C.muted}}>{l}</span>
+            <span className="text-xs font-bold text-white" style={{fontFamily:"'JetBrains Mono',monospace"}}>{v}</span>
+          </div>
+        ))}
+      </G>
+
+      <G className="mt-3" p="p-5">
+        <p className="text-[10px] font-bold tracking-[0.2em] mb-3" style={{color:C.dim}}>DATA</p>
+        <button onClick={()=>{if(confirm("Reset all data to defaults? This cannot be undone.")){localStorage.removeItem("pulse-data");window.location.reload();}}}
+          className="w-full py-3 rounded-xl text-sm font-bold transition" style={{color:C.red,background:`${C.red}10`,border:`1px solid ${C.red}20`}}>
+          Reset All Data
+        </button>
+      </G>
+    </S>
+  );
+}
 
 function App() {
   const [tab,setTab]=useState("home");
@@ -678,6 +951,7 @@ function App() {
         {tab==="vel"&&<Velocity data={data}/>}
         {tab==="loan"&&<LoansTab data={data} onUpdate={onUpdate}/>}
         {tab==="hp"&&<HealthTab data={data} onUpdate={onUpdate}/>}
+        {tab==="settings"&&<SettingsTab data={data} onUpdate={onUpdate}/>}
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 z-50" style={{background:"rgba(5,10,20,0.95)",backdropFilter:"blur(24px)",borderTop:`1px solid ${C.border}`}}>
