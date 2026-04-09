@@ -663,8 +663,8 @@ function App() {
         {tab==="hp"&&<HealthTab data={data} onUpdate={onUpdate}/>}
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-50" style={{background:"rgba(5,10,20,0.95)",backdropFilter:"blur(24px)",borderTop:`1px solid ${C.border}`,paddingBottom:"env(safe-area-inset-bottom)"}}>
-        <div className="flex justify-around items-center py-2 max-w-lg mx-auto">
+      <div className="fixed bottom-0 left-0 right-0 z-50" style={{background:"rgba(5,10,20,0.95)",backdropFilter:"blur(24px)",borderTop:`1px solid ${C.border}`}}>
+        <div className="flex justify-around items-center pt-2 max-w-lg mx-auto" style={{paddingBottom:"calc(env(safe-area-inset-bottom) + 4px)"}}>
           {NAV.map(n=>(
             <button key={n.id} onClick={()=>setTab(n.id)} className="flex flex-col items-center gap-0.5 px-2 py-1 transition-all duration-200" style={{color:tab===n.id?C.blue:C.dim}}>
               <div style={{transform:tab===n.id?"scale(1.1)":"scale(1)",transition:"transform 0.2s"}}>{n.i}</div>
