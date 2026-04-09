@@ -137,10 +137,10 @@ function parseDiscoverNotif(text) {
 
 // ── STORAGE ──────────────────────────────────────────────────────────────────
 async function loadState() {
-  try { const r = await window.storage.get("pulse-data"); return r ? JSON.parse(r.value) : null; } catch { return null; }
+  try { const v = localStorage.getItem("pulse-data"); return v ? JSON.parse(v) : null; } catch { return null; }
 }
 async function saveState(data) {
-  try { await window.storage.set("pulse-data", JSON.stringify(data)); } catch(e) { console.error("Storage save failed:", e); }
+  try { localStorage.setItem("pulse-data", JSON.stringify(data)); } catch(e) { console.error("Storage save failed:", e); }
 }
 
 // ── ANIMATED NUMBER ──────────────────────────────────────────────────────────
