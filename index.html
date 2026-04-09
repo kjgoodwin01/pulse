@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#050A14" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Pulse" />
@@ -14,12 +15,14 @@
   <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- Recharts + React -->
+  <!-- React & ReactDOM first -->
   <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+
+  <!-- Recharts after React -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.7/Recharts.min.js"></script>
 
-  <!-- Babel (JSX transform) -->
+  <!-- Babel -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.10/babel.min.js"></script>
 
   <style>
@@ -35,10 +38,39 @@
 <body>
   <div id="root"></div>
 
-  <script type="text/babel" data-type="module" src="./Pulse.jsx"></script>
-
   <script>
-    // Register service worker for PWA
+    // Map import statements to window globals
+    const importMap = { "react": "React", "recharts": "Recharts" };
+
+    function preprocess(code) {
+      return code
+        // import { X, Y } from "react" => const { X, Y } = window.React;
+        .replace(/import\s+\{([^}]+)\}\s+from\s+["']([^"']+)["'];?/g, (_, names, pkg) => {
+          const g = importMap[pkg];
+          return g ? `const {${names}} = window.${g};` : '';
+        })
+        // remove any remaining default imports
+        .replace(/import\s+\w+\s+from\s+["'][^"']+["'];?/g, '')
+        // export default function App => function App (we render manually)
+        .replace(/export\s+default\s+function\s+(\w+)/g, 'function $1')
+        .replace(/export\s+default\s+/g, '');
+    }
+
+    fetch('./Pulse.jsx')
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+      .then(src => {
+        const processed = preprocess(src);
+        const compiled = Babel.transform(processed, { presets: ['react'], filename: 'Pulse.jsx' }).code;
+        const final = compiled + '\nReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));';
+        const s = document.createElement('script');
+        s.textContent = final;
+        document.body.appendChild(s);
+      })
+      .catch(err => {
+        document.getElementById('root').innerHTML =
+          '<div style="color:#f87171;padding:32px;font-family:monospace;background:#050A14;min-height:100vh">Error loading Pulse:<br><br>' + err.message + '</div>';
+      });
+
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/pulse/sw.js').catch(() => {});
