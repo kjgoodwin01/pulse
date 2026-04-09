@@ -748,7 +748,6 @@ const NAV=[
   {id:"vel",l:"Velocity",i:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>},
   {id:"loan",l:"Loans",i:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>},
   {id:"hp",l:"Health",i:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>},
-  {id:"settings",l:"Settings",i:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>},
 ];
 
 // ── API KEY HELPERS ───────────────────────────────────────────────────────────
@@ -768,8 +767,8 @@ function SettingsTab({data,onUpdate}) {
   };
 
   return (
-    <S className="px-5 pb-10">
-      <G className="mt-5" p="p-5">
+    <div className="pb-4">
+      <G className="mb-3" p="p-5">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{background:"rgba(59,130,246,0.12)"}}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.blue} strokeWidth="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
@@ -803,7 +802,7 @@ function SettingsTab({data,onUpdate}) {
         </p>
       </G>
 
-      <G className="mt-3" p="p-5">
+      <G className="mb-3" p="p-5">
         <p className="text-[10px] font-bold tracking-[0.2em] mb-3" style={{color:C.dim}}>CYCLE SETTINGS</p>
         {[["Cycle Start",data.cycleStart],["Cycle End",data.cycleEnd],["Monthly Budget",`$${data.cycleTarget}`],["Monthly Income",`$${data.monthlyIncome}`]].map(([l,v])=>(
           <div key={l} className="flex justify-between py-2.5" style={{borderBottom:`1px solid ${C.border}`}}>
@@ -812,15 +811,14 @@ function SettingsTab({data,onUpdate}) {
           </div>
         ))}
       </G>
-
-      <G className="mt-3" p="p-5">
+      <G p="p-5">
         <p className="text-[10px] font-bold tracking-[0.2em] mb-3" style={{color:C.dim}}>DATA</p>
         <button onClick={()=>{if(confirm("Reset all data to defaults? This cannot be undone.")){localStorage.removeItem("pulse-data");window.location.reload();}}}
           className="w-full py-3 rounded-xl text-sm font-bold transition" style={{color:C.red,background:`${C.red}10`,border:`1px solid ${C.red}20`}}>
           Reset All Data
         </button>
       </G>
-    </S>
+    </div>
   );
 }
 
@@ -829,6 +827,7 @@ function App() {
   const [data,setData]=useState(DEFAULTS);
   const [ready,setReady]=useState(false);
   const [toast,setToast]=useState(null);
+  const [settingsOpen,setSettingsOpen]=useState(false);
   const toastTimer=useRef(null);
 
   const showToast=(msg)=>{
@@ -942,8 +941,13 @@ function App() {
             <p className="text-[10px]" style={{color:C.dim}}>Mar 15 – Apr 15 · Day {data.daysElapsed}/{data.totalDays}</p>
           </div>
         </div>
-        <div className="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-bold" style={{background:"linear-gradient(135deg,#e8f4ff,#00e5a0)",color:"#050a14"}}>KG</div>
+        <button onClick={()=>setSettingsOpen(true)} className="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-bold transition active:scale-95" style={{background:"linear-gradient(135deg,#e8f4ff,#00e5a0)",color:"#050a14"}}>KG</button>
       </div>
+
+      {/* Settings Modal */}
+      <Modal open={settingsOpen} onClose={()=>setSettingsOpen(false)} title="Settings">
+        <SettingsTab data={data} onUpdate={onUpdate}/>
+      </Modal>
 
       <div key={tab} style={{animation:"fadeUp 0.4s ease both"}}>
         {tab==="home"&&<Home data={data} onUpdate={onUpdate} onAddTransaction={onAddTransaction}/>}
@@ -951,7 +955,6 @@ function App() {
         {tab==="vel"&&<Velocity data={data}/>}
         {tab==="loan"&&<LoansTab data={data} onUpdate={onUpdate}/>}
         {tab==="hp"&&<HealthTab data={data} onUpdate={onUpdate}/>}
-        {tab==="settings"&&<SettingsTab data={data} onUpdate={onUpdate}/>}
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 z-50" style={{background:"rgba(5,10,20,0.95)",backdropFilter:"blur(24px)",borderTop:`1px solid ${C.border}`}}>
