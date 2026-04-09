@@ -37,9 +37,23 @@
 
 const DATA_URL = "./data.json";
 
+function computeCycleDays(cycleStart, cycleEnd) {
+  const now = new Date();
+  const start = new Date(cycleStart);
+  const end = new Date(cycleEnd);
+  const totalDays = Math.round((end - start) / 86400000);
+  const daysElapsed = Math.min(Math.max(Math.round((now - start) / 86400000), 1), totalDays);
+  const daysRemaining = Math.max(totalDays - daysElapsed, 0);
+  return { totalDays, daysElapsed, daysRemaining };
+}
+
+const CYCLE_START = "2026-03-15";
+const CYCLE_END = "2026-04-15";
+const { totalDays, daysElapsed, daysRemaining } = computeCycleDays(CYCLE_START, CYCLE_END);
+
 const DEFAULTS = {
-  balance: 584.94, cycleTarget: 1000, cycleStart: "2026-03-15", cycleEnd: "2026-04-15",
-  daysElapsed: 10, daysRemaining: 21, totalDays: 31, monthlyIncome: 4761.80, loanPayment: 3450,
+  balance: 584.94, cycleTarget: 1000, cycleStart: CYCLE_START, cycleEnd: CYCLE_END,
+  daysElapsed, daysRemaining, totalDays, monthlyIncome: 4761.80, loanPayment: 3450,
   fixed: {"Student Loans":3450,"Insurance":160.75,"Phone":32.50,"Amazon Prime":15.89,"Paramount+":13.77,"ChatGPT":20,"Apple iCloud":0.99,"Microsoft 365":8.33,"Claude Pro":17},
   loans: [
     {id:"l1",name:"1-05 Direct Unsub",balance:2729.99,rate:0.0783,min:231.27},
@@ -568,8 +582,11 @@ function App() {
   useEffect(()=>{
     (async()=>{
       const saved = await loadState();
-      if(saved) setData(saved);
-      try { const r=await fetch(DATA_URL); if(r.ok){const d=await r.json();setData(d);} } catch{}
+      if(saved) {
+        const fresh = computeCycleDays(saved.cycleStart||CYCLE_START, saved.cycleEnd||CYCLE_END);
+        setData({...saved, ...fresh});
+      }
+      try { const r=await fetch(DATA_URL); if(r.ok){const d=await r.json();const fresh=computeCycleDays(d.cycleStart||CYCLE_START,d.cycleEnd||CYCLE_END);setData({...d,...fresh});} } catch{}
 
       // Web Share Target — read ?text= param from URL
       const params=new URLSearchParams(window.location.search);
