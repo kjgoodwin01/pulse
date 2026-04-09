@@ -664,11 +664,13 @@ function App() {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 z-50" style={{background:"rgba(5,10,20,0.95)",backdropFilter:"blur(24px)",borderTop:`1px solid ${C.border}`}}>
-        <div className="flex justify-around items-center pt-2 max-w-lg mx-auto" style={{paddingBottom:"calc(env(safe-area-inset-bottom) + 4px)"}}>
+        <div className="flex justify-around items-center max-w-lg mx-auto" style={{paddingTop:"8px",paddingBottom:"8px"}}>
           {NAV.map(n=>(
-            <button key={n.id} onClick={()=>setTab(n.id)} className="flex flex-col items-center gap-0.5 px-2 py-1 transition-all duration-200" style={{color:tab===n.id?C.blue:C.dim}}>
-              <div style={{transform:tab===n.id?"scale(1.1)":"scale(1)",transition:"transform 0.2s"}}>{n.i}</div>
-              <span className="text-[9px] font-semibold tracking-wider">{n.l}</span>
+            <button key={n.id} onClick={()=>setTab(n.id)} className="flex flex-col items-center gap-0.5 px-3 transition-all duration-200" style={{color:tab===n.id?C.blue:C.dim}}>
+              <div style={{transform:tab===n.id?"scale(1.05)":"scale(1)",transition:"transform 0.2s"}}>
+                {React.cloneElement(n.i,{width:20,height:20})}
+              </div>
+              <span style={{fontSize:"8px",fontWeight:"600",letterSpacing:"0.05em"}}>{n.l}</span>
               {tab===n.id&&<div className="w-1 h-1 rounded-full" style={{background:C.blue}}/>}
             </button>
           ))}
