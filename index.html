@@ -448,9 +448,8 @@ Include ALL transactions visible, even if marked Pending. Return [] only if ther
 }
 
 // ── HOME ─────────────────────────────────────────────────────────────────────
-function Home({data,onUpdate,onAddTransaction,onImportTransactions}) {
+function Home({data,onUpdate,onAddTransaction,onImportTransactions,menuOpen,setMenuOpen}) {
   const [editing,setEditing]=useState(false);const [tmp,setTmp]=useState("");
-  const [menuOpen,setMenuOpen]=useState(false);
   const [quickOpen,setQuickOpen]=useState(false);
   const [scanOpen,setScanOpen]=useState(null);
   const [quick,setQuick]=useState({amount:"",desc:"",cat:"Dining"});
@@ -503,12 +502,7 @@ function Home({data,onUpdate,onAddTransaction,onImportTransactions}) {
         </div>
       ))}
 
-      {/* FAB — fixed, 8px above nav bar */}
-      <button onClick={()=>setMenuOpen(true)}
-        className="fixed right-5 z-40 w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-95"
-        style={{bottom:"calc(env(safe-area-inset-bottom) + 56px + 8px)",background:`linear-gradient(135deg,${C.blue},${C.purple})`,boxShadow:`0 0 30px -5px ${C.blue}60`}}>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      </button>
+      
 
       {/* Add Menu Modal */}
       <Modal open={menuOpen} onClose={()=>setMenuOpen(false)} title="Add Transactions">
@@ -856,6 +850,7 @@ function App() {
   const [ready,setReady]=useState(false);
   const [toast,setToast]=useState(null);
   const [settingsOpen,setSettingsOpen]=useState(false);
+  const [menuOpen,setMenuOpen]=useState(false);
   const toastTimer=useRef(null);
 
   const showToast=(msg)=>{
@@ -991,7 +986,7 @@ function App() {
       </Modal>
 
       <div key={tab} style={{animation:"fadeUp 0.4s ease both"}}>
-        {tab==="home"&&<Home data={data} onUpdate={onUpdate} onAddTransaction={onAddTransaction} onImportTransactions={onImportTransactions}/>}
+        {tab==="home"&&<Home data={data} onUpdate={onUpdate} onAddTransaction={onAddTransaction} onImportTransactions={onImportTransactions} menuOpen={menuOpen} setMenuOpen={setMenuOpen}/>}
         {tab==="act"&&<Activity data={data}/>}
         {tab==="vel"&&<Velocity data={data}/>}
         {tab==="loan"&&<LoansTab data={data} onUpdate={onUpdate}/>}
@@ -999,7 +994,7 @@ function App() {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 z-50" style={{background:"rgba(5,10,20,0.95)",backdropFilter:"blur(24px)",borderTop:`1px solid ${C.border}`}}>
-        <div className="flex justify-around items-center max-w-lg mx-auto" style={{paddingTop:"8px",paddingBottom:"8px"}}>
+        <div className="relative flex justify-around items-center max-w-lg mx-auto" style={{paddingTop:"8px",paddingBottom:"8px"}}>
           {NAV.map(n=>(
             <button key={n.id} onClick={()=>setTab(n.id)} className="flex flex-col items-center gap-0.5 px-3 transition-all duration-200" style={{color:tab===n.id?C.blue:C.dim}}>
               <div style={{transform:tab===n.id?"scale(1.05)":"scale(1)",transition:"transform 0.2s"}}>
@@ -1009,6 +1004,12 @@ function App() {
               {tab===n.id&&<div className="w-1 h-1 rounded-full" style={{background:C.blue}}/>}
             </button>
           ))}
+          {/* + button lives in the nav, always 8px above it */}
+          <button onClick={()=>setMenuOpen(true)}
+            className="absolute w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-95"
+            style={{right:"16px",bottom:"calc(100% + 8px)",background:`linear-gradient(135deg,${C.blue},${C.purple})`,boxShadow:`0 0 24px -4px ${C.blue}80`}}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
         </div>
       </div>
     </div>
