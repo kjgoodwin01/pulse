@@ -448,7 +448,7 @@ Include ALL transactions visible, even if marked Pending. Return [] only if ther
 }
 
 // ── HOME ─────────────────────────────────────────────────────────────────────
-function Home({data,onUpdate,onAddTransaction}) {
+function Home({data,onUpdate,onAddTransaction,onImportTransactions}) {
   const [editing,setEditing]=useState(false);const [tmp,setTmp]=useState("");
   const [menuOpen,setMenuOpen]=useState(false);
   const [quickOpen,setQuickOpen]=useState(false);
@@ -546,7 +546,7 @@ function Home({data,onUpdate,onAddTransaction}) {
       </Modal>
 
       {/* Vision Scanner Modal */}
-      {scanOpen&&<ScanModal mode={scanOpen} onClose={()=>setScanOpen(null)} onImport={(txns)=>{txns.forEach(t=>onAddTransaction(t));setScanOpen(null);}}/>}
+      {scanOpen&&<ScanModal mode={scanOpen} onClose={()=>setScanOpen(null)} onImport={(txns)=>{onImportTransactions(txns);setScanOpen(null);}}/>}
 
       {/* Quick Add Modal */}
       <Modal open={quickOpen} onClose={()=>setQuickOpen(false)} title="Manual Entry">
@@ -877,6 +877,17 @@ function App() {
     showToast(`${$(txn.amount)} · ${txn.desc} · ${txn.cat}`);
   };
 
+  const onImportTransactions=(txns)=>{
+    if(!txns.length) return;
+    const total=txns.reduce((s,t)=>s+t.amount,0);
+    const newData={...data,
+      balance:data.balance+total,
+      transactions:[...txns,...data.transactions]
+    };
+    onUpdate(newData);
+    showToast(`Imported ${txns.length} transactions · ${$(total)}`);
+  };
+
   // Load persisted state, then try live data, then handle share target
   useEffect(()=>{
     (async()=>{
@@ -982,7 +993,7 @@ function App() {
       </Modal>
 
       <div key={tab} style={{animation:"fadeUp 0.4s ease both"}}>
-        {tab==="home"&&<Home data={data} onUpdate={onUpdate} onAddTransaction={onAddTransaction}/>}
+        {tab==="home"&&<Home data={data} onUpdate={onUpdate} onAddTransaction={onAddTransaction} onImportTransactions={onImportTransactions}/>}
         {tab==="act"&&<Activity data={data}/>}
         {tab==="vel"&&<Velocity data={data}/>}
         {tab==="loan"&&<LoansTab data={data} onUpdate={onUpdate}/>}
