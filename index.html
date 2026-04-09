@@ -268,11 +268,11 @@ function sim(loans,pmt) {
    ═════════════════════════════════════════════════════════════════════════════ */
 
 // ── HOME ─────────────────────────────────────────────────────────────────────
-function Home({data,bal,setBal,onAddTransaction}) {
+function Home({data,onUpdate,onAddTransaction}) {
   const [editing,setEditing]=useState(false);const [tmp,setTmp]=useState("");
   const [quickOpen,setQuickOpen]=useState(false);
   const [quick,setQuick]=useState({amount:"",desc:"",cat:"Dining"});
-  const spent=bal??data.balance;const rem=data.cycleTarget-spent;const safe=Math.max(0,rem/data.daysRemaining);
+  const spent=data.balance;const rem=data.cycleTarget-spent;const safe=Math.max(0,rem/data.daysRemaining);
   const safeW=Math.min(safe*7,rem);const burn=spent/data.daysElapsed;const pace=data.cycleTarget/data.totalDays;const proj=burn*data.totalDays;
   const wc=sc(safeW,50,15),rc=rem>0?C.emerald:C.red;
 
@@ -289,9 +289,9 @@ function Home({data,bal,setBal,onAddTransaction}) {
         {editing?(
           <div className="flex gap-2 items-center">
             <input type="number" step="0.01" value={tmp} onChange={e=>setTmp(e.target.value)}
-              onKeyDown={e=>{if(e.key==="Enter"){setBal(parseFloat(tmp)||0);setEditing(false);}if(e.key==="Escape")setEditing(false);}}
+              onKeyDown={e=>{if(e.key==="Enter"){onUpdate({...data,balance:parseFloat(tmp)||0});setEditing(false);}if(e.key==="Escape")setEditing(false);}}
               className="w-28 rounded-lg px-3 py-1.5 text-sm text-white text-right outline-none transition" style={{background:C.surface,border:`1px solid ${C.border}`}} autoFocus placeholder="584.94"/>
-            <button onClick={()=>{setBal(parseFloat(tmp)||0);setEditing(false);}} className="text-[10px] font-bold tracking-wider px-3 py-1.5 rounded-lg transition" style={{color:C.blue,background:`${C.blue}15`}}>SET</button>
+            <button onClick={()=>{onUpdate({...data,balance:parseFloat(tmp)||0});setEditing(false);}} className="text-[10px] font-bold tracking-wider px-3 py-1.5 rounded-lg transition" style={{color:C.blue,background:`${C.blue}15`}}>SET</button>
           </div>
         ):(
           <button onClick={()=>{setTmp(spent.toFixed(2));setEditing(true);}} className="flex items-center gap-1 text-sm font-semibold transition" style={{color:C.blue}}>
@@ -553,28 +553,25 @@ const NAV=[
 
 function App() {
   const [tab,setTab]=useState("home");
-  const [bal,setBal]=useState(null);
   const [data,setData]=useState(DEFAULTS);
   const [ready,setReady]=useState(false);
   const [toast,setToast]=useState(null);
   const toastTimer=useRef(null);
 
-  // Show toast for 2.5s
   const showToast=(msg)=>{
     setToast(msg);
     clearTimeout(toastTimer.current);
     toastTimer.current=setTimeout(()=>setToast(null),2500);
   };
 
-  // Add a transaction, update balance, persist
+  const onUpdate=(newData)=>{setData(newData);saveState(newData);};
+
   const onAddTransaction=(txn)=>{
     const newData={...data,
-      balance:(bal??data.balance)+txn.amount,
+      balance:data.balance+txn.amount,
       transactions:[txn,...data.transactions]
     };
-    setBal(newData.balance);
-    setData(newData);
-    saveState(newData);
+    onUpdate(newData);
     showToast(`${$(txn.amount)} · ${txn.desc} · ${txn.cat}`);
   };
 
@@ -610,8 +607,7 @@ function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
 
-  // Persist on changes
-  const onUpdate=(newData)=>{setData(newData);saveState(newData);};
+  // Persist on changes — handled by onUpdate above
 
   return (
     <div className="min-h-screen pb-24" style={{background:`linear-gradient(180deg,${C.bg},#0a0f1e)`,fontFamily:"'Poppins',sans-serif"}}>
@@ -677,7 +673,7 @@ function App() {
       </div>
 
       <div key={tab} style={{animation:"fadeUp 0.4s ease both"}}>
-        {tab==="home"&&<Home data={data} bal={bal} setBal={setBal} onAddTransaction={onAddTransaction}/>}
+        {tab==="home"&&<Home data={data} onUpdate={onUpdate} onAddTransaction={onAddTransaction}/>}
         {tab==="act"&&<Activity data={data}/>}
         {tab==="vel"&&<Velocity data={data}/>}
         {tab==="loan"&&<LoansTab data={data} onUpdate={onUpdate}/>}
