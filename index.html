@@ -306,22 +306,31 @@ function ScanModal({mode, onClose, onImport}) {
             role:"user",
             content:[
               {type:"image",source:{type:"base64",media_type:file.type||"image/jpeg",data:b64}},
-              {type:"text",text:`Extract all transactions from this Discover card statement or transaction list image.
-Return ONLY a JSON array, no other text. Each object must have:
-- "date": "YYYY-MM-DD" (use current year 2026 if year not visible)
+              {type:"text",text:`Look at this image and extract every transaction you can see, including pending ones.
+Return ONLY a JSON array with no other text, markdown, or explanation.
+Each object must have exactly these fields:
+- "date": "YYYY-MM-DD" (use 2026 if year not shown)
 - "desc": merchant name in UPPERCASE
-- "amount": number (positive, no dollar sign)
+- "amount": number only, no dollar sign, always positive
 
-Example: [{"date":"2026-03-24","desc":"CHICK-FIL-A #03842","amount":12.45}]
+Example output: [{"date":"2026-04-08","desc":"ANTHROPIC","amount":8.48},{"date":"2026-04-08","desc":"ANTHROPIC","amount":10.60}]
 
-If no transactions are visible, return an empty array [].`}
+Include ALL transactions visible, even if marked Pending. Return [] only if there are truly zero transactions in the image.`}
             ]
           }]
         })
       });
 
+      if(!resp.ok) {
+        const errBody = await resp.text();
+        console.error("API error:", resp.status, errBody);
+        throw new Error(`API error ${resp.status}: ${errBody.slice(0,200)}`);
+      }
+
       const d=await resp.json();
+      console.log("API response:", JSON.stringify(d));
       const text=d.content?.[0]?.text||"[]";
+      console.log("Extracted text:", text);
       const clean=text.replace(/```json|```/g,"").trim();
       const txns=JSON.parse(clean);
 
@@ -330,8 +339,8 @@ If no transactions are visible, return an empty array [].`}
       setParsed(categorized);
       setStatus("done");
     } catch(e) {
-      console.error(e);
-      setErrorMsg("Couldn't parse the image. Try a clearer photo.");
+      console.error("Scan error:", e);
+      setErrorMsg(e.message||"Couldn't parse the image. Try a clearer photo.");
       setStatus("error");
     }
   };
