@@ -1021,7 +1021,23 @@ function App() {
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/pulse/sw.js').catch(() => {});
+        navigator.serviceWorker.register('/pulse/sw.js').then(reg => {
+          // Check for updates every time the app loads
+          reg.update();
+          // When a new SW is waiting, activate it immediately and reload
+          reg.addEventListener('updatefound', () => {
+            const newSW = reg.installing;
+            newSW.addEventListener('statechange', () => {
+              if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+                newSW.postMessage('SKIP_WAITING');
+              }
+            });
+          });
+        }).catch(() => {});
+        // Reload once the new SW takes control
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          window.location.reload();
+        });
       });
     }
   </script>
