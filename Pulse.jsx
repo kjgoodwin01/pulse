@@ -1,0 +1,610 @@
+import { useState, useMemo, useEffect, useRef } from "react";
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from "recharts";
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   P U L S E
+   The heartbeat of your financial health
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+const DATA_URL = "./data.json";
+
+const DEFAULTS = {
+  balance: 584.94, cycleTarget: 1000, cycleStart: "2026-03-15", cycleEnd: "2026-04-15",
+  daysElapsed: 10, daysRemaining: 21, totalDays: 31, monthlyIncome: 4761.80, loanPayment: 3450,
+  fixed: {"Student Loans":3450,"Insurance":160.75,"Phone":32.50,"Amazon Prime":15.89,"Paramount+":13.77,"ChatGPT":20,"Apple iCloud":0.99,"Microsoft 365":8.33,"Claude Pro":17},
+  loans: [
+    {id:"l1",name:"1-05 Direct Unsub",balance:2729.99,rate:0.0783,min:231.27},
+    {id:"l2",name:"1-04 Direct Unsub",balance:8098.38,rate:0.0474,min:88.53},
+    {id:"l3",name:"1-02 Direct Sub",balance:4377.12,rate:0.0348,min:45.12},
+    {id:"l4",name:"1-03 Direct Unsub",balance:2102.64,rate:0.0348,min:21.69},
+    {id:"l5",name:"1-01 Direct Unsub",balance:5660.08,rate:0.0250,min:55.76},
+  ],
+  transactions: [
+    {date:"2026-03-24",desc:"PLAYSTATION 800-345-7669",amount:18.54,cat:"Entertainment"},
+    {date:"2026-03-23",desc:"CHICK-FIL-A #03842",amount:12.45,cat:"Dining"},
+    {date:"2026-03-22",desc:"LOY*NOVANTGOHEALTHUC",amount:135.00,cat:"Medical"},
+    {date:"2026-03-21",desc:"MICROSOFT*STORE MSBILL",amount:105.99,cat:"Shopping"},
+    {date:"2026-03-20",desc:"STARBUCKS STORE 12345",amount:6.75,cat:"Dining"},
+    {date:"2026-03-19",desc:"SHELL OIL 572168",amount:42.50,cat:"Gas"},
+    {date:"2026-03-18",desc:"WALMART SUPERCENTER",amount:87.23,cat:"Groceries"},
+    {date:"2026-03-17",desc:"DOORDASH*CHIPOTLE",amount:16.82,cat:"Dining"},
+    {date:"2026-03-16",desc:"AMAZON.COM*2K7F84HD2",amount:34.99,cat:"Shopping"},
+    {date:"2026-03-15",desc:"COSTCO WHSE #1234",amount:124.67,cat:"Groceries"},
+  ],
+};
+
+// ── PALETTE ──────────────────────────────────────────────────────────────────
+const C = {
+  bg:"#050A14",surface:"rgba(255,255,255,0.025)",border:"rgba(255,255,255,0.05)",
+  emerald:"#34d399",amber:"#fbbf24",red:"#f87171",blue:"#3b82f6",purple:"#a855f7",cyan:"#22d3ee",
+  text:"#e2e8f0",muted:"#64748b",dim:"#334155",faint:"#1e293b",
+  cats:{Groceries:"#10b981",Dining:"#f59e0b",Gas:"#3b82f6",Entertainment:"#a855f7",Shopping:"#ec4899",Medical:"#ef4444",Other:"#64748b"},
+};
+const sc=(v,g,w)=>v>g?C.emerald:v>w?C.amber:C.red;
+const $=(n,d=2)=>`$${n.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d})}`;
+const $0=n=>`$${Math.round(n).toLocaleString("en-US")}`;
+const pc=n=>`${Math.round(n*100)}%`;
+const LC=["#ef4444","#f59e0b","#3b82f6","#06b6d4","#10b981","#a855f7","#ec4899"];
+
+// ── KEYWORDS & PARSER ────────────────────────────────────────────────────────
+const KEYWORDS = {
+  "Groceries": ["walmart","kroger","costco","food lion","harris teeter","wegmans","aldi","publix","giant","trader joe","whole foods","sprouts","fresh market"],
+  "Dining": ["mcdonald","starbucks","chipotle","chick-fil","panera","doordash","ubereats","wendy","taco","pizza","dunkin","subway","burger","popeyes","wingstop","shake shack","five guys","applebee","olive garden","buffalo wild","sonic","dairy queen","ihop","waffle house","cracker barrel","chili","hooters","outback","red lobster","longhorn","bob evan","denny","ihop","bojangles","cookout","zaxby","raising cane","panda express","qdoba","moe's","jersey mike","jimmy john","firehouse","potbelly"],
+  "Gas": ["shell","bp","exxon","chevron","sunoco","wawa","sheetz","speedway","circle k","marathon","raceway","pilot","flying j","loves travel","quiktrip","qt ","kwik trip","casey","murphyusa","7-eleven","valero","gulf oil"],
+  "Entertainment": ["playstation","xbox","steam","netflix","spotify","hulu","disney","nintendo","apple tv","hbo","peacock","prime video","vudu","redbox","amc","regal","cinemark","ticketmaster","stubhub","eventbrite","twitch","youtube premium","sling","fubo","paramount","discovery+","espn+","showtime"],
+  "Shopping": ["amazon","target","microsoft","home depot","lowes","ikea","best buy","tj maxx","marshalls","ross","kohls","nordstrom","macy","jcpenney","gap","old navy","h&m","zara","nike","adidas","under armour","dick's sporting","rei ","bed bath","pier 1","world market","dollar general","dollar tree","five below","hobby lobby","joann","michaels","staples","office depot","chewy","wayfair","overstock","etsy"],
+  "Medical": ["novant","gohealth","cvs","walgreens","pharmacy","urgent care","labcorp","quest diag","aetna","cigna","humana","carecredit","dental","vision","optometry","dermatology","pediatric","primary care","hospital","clinic","healthspring"],
+};
+
+function autoCat(desc) {
+  const d = desc.toLowerCase();
+  for (const [cat, keys] of Object.entries(KEYWORDS)) {
+    if (keys.some(k => d.includes(k))) return cat;
+  }
+  return "Other";
+}
+
+// Parses Discover push notification text
+// Format: "A transaction of $10.60 has been initiated at ANTHROPIC on April 08, 2026. Tap to view."
+function parseDiscoverNotif(text) {
+  if (!text) return null;
+  // Amount: match "$XX.XX" pattern
+  const amtMatch = text.match(/\$(\d{1,6}(?:\.\d{2})?)/);
+  if (!amtMatch) return null; // Amount is required
+  const amount = parseFloat(amtMatch[1]);
+
+  // Merchant: between "at " and " on [Month]" or " on [date]" or end
+  // Covers: "at ANTHROPIC on April 08" and "at AMAZON MKTPLACE PMTS on April 08"
+  const merchantMatch = text.match(/\bat\s+(.+?)\s+on\s+(?:January|February|March|April|May|June|July|August|September|October|November|December|\d)/i);
+  const merchant = merchantMatch ? merchantMatch[1].trim() : "Unknown Merchant";
+
+  // Date: look for "Month DD, YYYY" pattern
+  const dateMatch = text.match(/(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})/i);
+  let date = new Date().toISOString().split("T")[0];
+  if (dateMatch) {
+    const months = {january:"01",february:"02",march:"03",april:"04",may:"05",june:"06",july:"07",august:"08",september:"09",october:"10",november:"11",december:"12"};
+    const m = months[dateMatch[1].toLowerCase()];
+    const d = dateMatch[2].padStart(2,"0");
+    date = `${dateMatch[3]}-${m}-${d}`;
+  }
+
+  const cat = autoCat(merchant);
+  return { amount, desc: merchant, date, cat };
+}
+
+// ── STORAGE ──────────────────────────────────────────────────────────────────
+async function loadState() {
+  try { const r = await window.storage.get("pulse-data"); return r ? JSON.parse(r.value) : null; } catch { return null; }
+}
+async function saveState(data) {
+  try { await window.storage.set("pulse-data", JSON.stringify(data)); } catch(e) { console.error("Storage save failed:", e); }
+}
+
+// ── ANIMATED NUMBER ──────────────────────────────────────────────────────────
+function Num({value,prefix="$",d=2,color="#fff",className="",style:sx}) {
+  const [disp,setDisp]=useState(value);const prev=useRef(value);const raf=useRef();
+  useEffect(()=>{
+    const s=prev.current,e=value,t0=performance.now();
+    const go=now=>{const p=Math.min((now-t0)/900,1);setDisp(s+(e-s)*(1-Math.pow(1-p,4)));if(p<1)raf.current=requestAnimationFrame(go);};
+    raf.current=requestAnimationFrame(go);prev.current=value;return()=>cancelAnimationFrame(raf.current);
+  },[value]);
+  const str=d>0?disp.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d}):Math.round(disp).toLocaleString("en-US");
+  return <span className={className} style={{color,fontFamily:"'JetBrains Mono',monospace",...(sx||{})}}>{prefix}{str}</span>;
+}
+
+// ── THE RING ─────────────────────────────────────────────────────────────────
+function Ring({spent,target,daysRemaining,size=220,stroke=10}) {
+  const pctUsed=Math.min(spent/target,1);const rem=target-spent;const safe=Math.max(0,rem/(daysRemaining||1));
+  const color=sc(safe,20,5);const r=(size-stroke*2)/2;const circ=2*Math.PI*r;const arc=circ*0.78;const off=arc*(1-pctUsed);
+  const gid=useMemo(()=>`rg${Math.random().toString(36).slice(2,6)}`,[]);
+  return (
+    <div className="relative flex items-center justify-center" style={{width:size,height:size}}>
+      <div className="absolute inset-0 flex items-center justify-center"><div className="rounded-full blur-3xl opacity-20" style={{width:size*0.6,height:size*0.6,background:color}}/></div>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{transform:"rotate(-225deg)"}}>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth={stroke} strokeDasharray={`${arc} ${circ}`} strokeLinecap="round"/>
+        <defs><linearGradient id={gid} x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor={color}/><stop offset="100%" stopColor={color} stopOpacity={0.4}/></linearGradient></defs>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={`url(#${gid})`} strokeWidth={stroke} strokeDasharray={`${arc} ${circ}`} strokeDashoffset={off} strokeLinecap="round" style={{transition:"stroke-dashoffset 1.2s cubic-bezier(0.16,1,0.3,1),stroke 0.6s ease"}}/>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={stroke+6} strokeDasharray={`2 ${circ}`} strokeDashoffset={off} strokeLinecap="round" opacity={0.3} style={{filter:"blur(4px)",transition:"stroke-dashoffset 1.2s cubic-bezier(0.16,1,0.3,1)"}}/>
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <Num value={safe} className="text-4xl font-bold" color={color}/><span className="text-[9px] font-bold tracking-[0.25em] mt-1" style={{color:C.dim}}>TODAY</span>
+      </div>
+    </div>
+  );
+}
+
+// ── UI PRIMITIVES ────────────────────────────────────────────────────────────
+function G({children,className="",glow,p="p-5",onClick}) {
+  return <div onClick={onClick} className={`relative rounded-2xl ${p} ${onClick?'cursor-pointer active:scale-[0.98]':''} transition-all duration-200 ${className}`}
+    style={{background:C.surface,border:`1px solid ${C.border}`,boxShadow:glow?`0 0 60px -15px ${glow}`:"0 2px 20px rgba(0,0,0,0.3)",backdropFilter:"blur(12px)"}}>{children}</div>;
+}
+function S({children,className=""}) {
+  const items=Array.isArray(children)?children.filter(Boolean):[children];
+  return <div className={className}>{items.map((c,i)=><div key={i} style={{animation:`fadeUp 0.5s ease ${i*70}ms both`}}>{c}</div>)}</div>;
+}
+const Tip=({active,payload,label})=>{
+  if(!active||!payload?.length)return null;
+  return <div className="rounded-xl px-3 py-2 text-xs" style={{background:"rgba(15,23,42,0.95)",border:`1px solid ${C.border}`,backdropFilter:"blur(10px)"}}>
+    <div className="text-gray-500 mb-1">{label}</div>
+    {payload.map((p,i)=><div key={i} style={{color:p.color||p.stroke,fontFamily:"'JetBrains Mono',monospace"}}>{p.name}: {$(p.value)}</div>)}
+  </div>;
+};
+
+// ── MODAL ────────────────────────────────────────────────────────────────────
+function Modal({open,onClose,title,children}) {
+  if(!open) return null;
+  return (
+    <div className="fixed inset-0 z-[100] flex items-end justify-center" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"/>
+      <div className="relative w-full max-w-lg rounded-t-3xl overflow-hidden" style={{background:"#0c1222",border:`1px solid ${C.border}`,borderBottom:"none",maxHeight:"85vh"}}
+        onClick={e=>e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4" style={{borderBottom:`1px solid ${C.border}`}}>
+          <span className="text-sm font-bold text-white">{title}</span>
+          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-white transition" style={{background:C.surface}}>✕</button>
+        </div>
+        <div className="px-5 py-4 overflow-y-auto" style={{maxHeight:"calc(85vh - 60px)"}}>{children}</div>
+      </div>
+    </div>
+  );
+}
+
+// ── TOAST ────────────────────────────────────────────────────────────────────
+function Toast({toast}) {
+  if (!toast) return null;
+  return (
+    <div className="fixed top-0 left-0 right-0 z-[200] flex justify-center pointer-events-none" style={{paddingTop:"max(16px, env(safe-area-inset-top))"}}>
+      <div className="mx-4 max-w-sm w-full rounded-2xl overflow-hidden flex items-center gap-3"
+        style={{background:"rgba(15,23,42,0.97)",border:`1px solid rgba(52,211,153,0.3)`,backdropFilter:"blur(20px)",boxShadow:"0 8px 40px rgba(0,0,0,0.5)",animation:"toastIn 0.4s cubic-bezier(0.16,1,0.3,1) both"}}>
+        <div className="w-1 self-stretch flex-shrink-0" style={{background:"#34d399"}}/>
+        <div className="py-3 pr-4 flex-1">
+          <p className="text-xs font-bold text-white" style={{fontFamily:"'Poppins',sans-serif"}}>Transaction Added</p>
+          <p className="text-[11px] mt-0.5" style={{color:"#94a3b8",fontFamily:"'JetBrains Mono',monospace"}}>{toast}</p>
+        </div>
+        <div className="mr-3 w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0" style={{background:"rgba(52,211,153,0.15)"}}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Input({label,value,onChange,type="text",placeholder=""}) {
+  return (
+    <div className="mb-3">
+      <label className="text-[10px] font-bold tracking-[0.15em] block mb-1.5" style={{color:C.dim}}>{label}</label>
+      <input type={type} step={type==="number"?"0.01":undefined} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
+        className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 outline-none transition" style={{background:C.surface,border:`1px solid ${C.border}`}}/>
+    </div>
+  );
+}
+
+function Btn({children,onClick,color=C.blue,full,className="",disabled}) {
+  return <button onClick={onClick} disabled={disabled}
+    className={`${full?'w-full':''} px-5 py-3 rounded-xl text-sm font-bold text-white transition-all active:scale-[0.97] disabled:opacity-40 ${className}`}
+    style={{background:color}}>{children}</button>;
+}
+
+// ── AVALANCHE SIM ────────────────────────────────────────────────────────────
+function sim(loans,pmt) {
+  if(!loans.length||pmt<=0) return {mo:0,ti:0,pd:{},sn:[]};
+  const a=loans.map(l=>({...l})).sort((x,y)=>y.rate-x.rate);
+  let mo=0,ti=0;const sn=[],pd={};
+  sn.push({m:0,...Object.fromEntries(a.map(l=>[l.name,l.balance]))});
+  while(a.some(l=>l.balance>0.01)&&mo<360){
+    mo++;a.forEach(l=>{if(l.balance>0){const i=l.balance*(l.rate/12);l.balance+=i;ti+=i;}});
+    let r=pmt;a.forEach(l=>{if(l.balance>0){const p=Math.min(l.min,l.balance);l.balance-=p;r-=p;}});
+    for(const l of a){if(l.balance>0&&r>0){const p=Math.min(r,l.balance);l.balance-=p;r-=p;break;}}
+    a.forEach(l=>{if(l.balance<=0.01&&!pd[l.name]){pd[l.name]=mo;l.balance=0;}});
+    sn.push({m:mo,...Object.fromEntries(a.map(l=>[l.name,Math.max(0,l.balance)]))});
+  }
+  return {mo,ti,pd,sn};
+}
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   TABS
+   ═════════════════════════════════════════════════════════════════════════════ */
+
+// ── HOME ─────────────────────────────────────────────────────────────────────
+function Home({data,bal,setBal,onAddTransaction}) {
+  const [editing,setEditing]=useState(false);const [tmp,setTmp]=useState("");
+  const [quickOpen,setQuickOpen]=useState(false);
+  const [quick,setQuick]=useState({amount:"",desc:"",cat:"Dining"});
+  const spent=bal??data.balance;const rem=data.cycleTarget-spent;const safe=Math.max(0,rem/data.daysRemaining);
+  const safeW=Math.min(safe*7,rem);const burn=spent/data.daysElapsed;const pace=data.cycleTarget/data.totalDays;const proj=burn*data.totalDays;
+  const wc=sc(safeW,50,15),rc=rem>0?C.emerald:C.red;
+
+  const handleQuickAdd=()=>{
+    const amt=parseFloat(quick.amount);if(!amt||!quick.desc) return;
+    const txn={date:new Date().toISOString().split("T")[0],desc:quick.desc.toUpperCase(),amount:amt,cat:quick.cat||autoCat(quick.desc)};
+    onAddTransaction(txn);setQuick({amount:"",desc:"",cat:"Dining"});setQuickOpen(false);
+  };
+
+  return (
+    <S className="px-5 pb-10">
+      <div className="flex items-center justify-between py-2">
+        <span className="text-[10px] font-bold tracking-[0.2em]" style={{color:C.dim}}>BALANCE</span>
+        {editing?(
+          <div className="flex gap-2 items-center">
+            <input type="number" step="0.01" value={tmp} onChange={e=>setTmp(e.target.value)}
+              onKeyDown={e=>{if(e.key==="Enter"){setBal(parseFloat(tmp)||0);setEditing(false);}if(e.key==="Escape")setEditing(false);}}
+              className="w-28 rounded-lg px-3 py-1.5 text-sm text-white text-right outline-none transition" style={{background:C.surface,border:`1px solid ${C.border}`}} autoFocus placeholder="584.94"/>
+            <button onClick={()=>{setBal(parseFloat(tmp)||0);setEditing(false);}} className="text-[10px] font-bold tracking-wider px-3 py-1.5 rounded-lg transition" style={{color:C.blue,background:`${C.blue}15`}}>SET</button>
+          </div>
+        ):(
+          <button onClick={()=>{setTmp(spent.toFixed(2));setEditing(true);}} className="flex items-center gap-1 text-sm font-semibold transition" style={{color:C.blue}}>
+            {$(spent)}<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="opacity-40"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+        )}
+      </div>
+      <div className="flex justify-center my-4"><Ring spent={spent} target={data.cycleTarget} daysRemaining={data.daysRemaining} size={240} stroke={12}/></div>
+      <div className="flex gap-3">
+        <G className="flex-1 text-center" p="py-4 px-3"><Num value={safeW} className="text-xl font-bold" color={wc}/><p className="text-[8px] font-bold tracking-[0.2em] mt-1" style={{color:C.dim}}>THIS WEEK</p></G>
+        <G className="flex-1 text-center" p="py-4 px-3"><Num value={rem} className="text-xl font-bold" color={rc}/><p className="text-[8px] font-bold tracking-[0.2em] mt-1" style={{color:C.dim}}>REMAINING</p></G>
+        <G className="flex-1 text-center" p="py-4 px-3"><span className="text-xl font-bold" style={{color:C.text,fontFamily:"'JetBrains Mono',monospace"}}>{data.daysRemaining}<span className="text-sm" style={{color:C.dim}}>d</span></span><p className="text-[8px] font-bold tracking-[0.2em] mt-1" style={{color:C.dim}}>LEFT</p></G>
+      </div>
+      <G className="mt-3" p="px-5 py-4">
+        <div className="flex justify-between items-center">
+          <div><span className="text-[10px] font-bold tracking-[0.2em]" style={{color:C.dim}}>BURN RATE</span><div className="mt-0.5"><Num value={burn} className="text-lg font-bold" color={burn>pace?C.red:C.emerald}/><span className="text-xs" style={{color:C.dim}}>/day</span></div></div>
+          <div className="w-px h-10" style={{background:C.border}}/>
+          <div className="text-right"><span className="text-[10px] font-bold tracking-[0.2em]" style={{color:C.dim}}>PROJECTED</span><div className="mt-0.5"><Num value={proj} className="text-lg font-bold" color={proj>data.cycleTarget?C.red:C.emerald}/></div></div>
+        </div>
+      </G>
+      <div className="mt-5 mb-1 flex items-center justify-between"><span className="text-[10px] font-bold tracking-[0.2em]" style={{color:C.dim}}>RECENT</span></div>
+      {data.transactions.slice(0,3).map((t,i)=>(
+        <div key={i} className="flex items-center py-3" style={{borderBottom:i<2?`1px solid ${C.border}`:"none"}}>
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center mr-3" style={{background:`${C.cats[t.cat]||C.muted}15`}}><div className="w-2 h-2 rounded-full" style={{background:C.cats[t.cat]||C.muted}}/></div>
+          <div className="flex-1 min-w-0"><p className="text-sm text-gray-300 truncate">{t.desc}</p><p className="text-[10px]" style={{color:C.muted}}>{t.cat}</p></div>
+          <span className="text-sm font-bold text-white ml-2" style={{fontFamily:"'JetBrains Mono',monospace"}}>{$(t.amount)}</span>
+        </div>
+      ))}
+
+      {/* Floating Add Button */}
+      <button onClick={()=>setQuickOpen(true)}
+        className="fixed right-5 z-40 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all active:scale-95"
+        style={{bottom:"90px",background:`linear-gradient(135deg,${C.blue},${C.purple})`,boxShadow:`0 0 30px -5px ${C.blue}60`}}>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+
+      {/* Quick Add Modal */}
+      <Modal open={quickOpen} onClose={()=>setQuickOpen(false)} title="Quick Add Transaction">
+        <Input label="AMOUNT" type="number" value={quick.amount} onChange={v=>setQuick({...quick,amount:v})} placeholder="12.45"/>
+        <Input label="MERCHANT" value={quick.desc} onChange={v=>setQuick({...quick,desc:v,cat:autoCat(v)})} placeholder="Chick-fil-A #03842"/>
+        <div className="mb-3">
+          <label className="text-[10px] font-bold tracking-[0.15em] block mb-1.5" style={{color:C.dim}}>CATEGORY</label>
+          <select value={quick.cat} onChange={e=>setQuick({...quick,cat:e.target.value})}
+            className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none transition" style={{background:C.surface,border:`1px solid ${C.border}`}}>
+            {["Groceries","Dining","Gas","Entertainment","Shopping","Medical","Other"].map(c=><option key={c} value={c} style={{background:"#0c1222"}}>{c}</option>)}
+          </select>
+        </div>
+        <Btn full onClick={handleQuickAdd} className="mt-2">Add Transaction</Btn>
+      </Modal>
+    </S>
+  );
+}
+
+// ── ACTIVITY ─────────────────────────────────────────────────────────────────
+function Activity({data}) {
+  const [q,setQ]=useState("");const txn=data.transactions;
+  const fil=txn.filter(t=>(t.desc+t.cat).toLowerCase().includes(q.toLowerCase()));
+  const total=txn.reduce((s,t)=>s+t.amount,0);
+  const cats=useMemo(()=>{const m={};txn.forEach(t=>{m[t.cat]=(m[t.cat]||0)+t.amount;});return Object.entries(m).sort((a,b)=>b[1]-a[1]);},[txn]);
+  return (
+    <S className="px-5 pb-10">
+      <div className="mt-4 relative">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" className="absolute left-3.5 top-1/2 -translate-y-1/2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search transactions..." className="w-full rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder-gray-600 outline-none transition" style={{background:C.surface,border:`1px solid ${C.border}`}}/>
+      </div>
+      <div className="mt-5 space-y-3">{cats.map(([cat,amt])=>(<div key={cat}><div className="flex items-center justify-between mb-1.5"><div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{background:C.cats[cat]||C.muted}}/><span className="text-xs" style={{color:C.muted}}>{cat}</span></div><div className="flex items-center gap-2"><span className="text-[10px]" style={{color:C.dim}}>{pc(amt/total)}</span><span className="text-xs font-bold text-white" style={{fontFamily:"'JetBrains Mono',monospace"}}>{$(amt)}</span></div></div><div className="h-1 rounded-full overflow-hidden" style={{background:C.faint}}><div className="h-full rounded-full transition-all duration-700" style={{width:`${(amt/total)*100}%`,background:C.cats[cat]||C.muted}}/></div></div>))}</div>
+      <div className="mt-6">{fil.map((t,i)=>(<div key={i} className="flex items-center py-3" style={{borderBottom:i<fil.length-1?`1px solid ${C.border}`:"none"}}><div className="w-9 h-9 rounded-xl flex items-center justify-center mr-3" style={{background:`${C.cats[t.cat]||C.muted}12`}}><div className="w-2.5 h-2.5 rounded-full" style={{background:C.cats[t.cat]||C.muted}}/></div><div className="flex-1 min-w-0"><p className="text-sm text-gray-200 truncate">{t.desc}</p><span className="text-[10px]" style={{color:C.muted}}>{t.date.slice(5).replace("-","/")} · {t.cat}</span></div><span className="text-sm font-bold text-white" style={{fontFamily:"'JetBrains Mono',monospace"}}>{$(t.amount)}</span></div>))}</div>
+    </S>
+  );
+}
+
+// ── VELOCITY ─────────────────────────────────────────────────────────────────
+function Velocity({data}) {
+  const spent=data.balance;const burn=spent/data.daysElapsed;const pace=data.cycleTarget/data.totalDays;
+  const proj=burn*data.totalDays;const ratio=burn/pace;const surplus=data.cycleTarget-proj;
+  let ps,pcolor;if(ratio<=0.85){ps="UNDER";pcolor=C.emerald;}else if(ratio<=1.05){ps="ON PACE";pcolor=C.blue;}else if(ratio<=1.20){ps="WATCH";pcolor=C.amber;}else{ps="OVER";pcolor=C.red;}
+  const daily=useMemo(()=>{const m={};data.transactions.forEach(t=>{const d=parseInt(t.date.slice(-2));m[d]=(m[d]||0)+t.amount;});let cum=0;return Array.from({length:data.daysElapsed},(_,i)=>{const d=15+i;const v=m[d]||0;cum+=v;return{d:`${d}`,v,cum,p:pace*(i+1)};});},[data,pace]);
+  return (
+    <S className="px-5 pb-10">
+      <div className="flex justify-center mt-5 mb-4"><div className="flex items-center gap-2 px-5 py-2 rounded-full" style={{background:`${pcolor}10`,border:`1px solid ${pcolor}20`}}><div className="relative w-2.5 h-2.5"><div className="absolute inset-0 rounded-full animate-ping opacity-30" style={{background:pcolor}}/><div className="w-2.5 h-2.5 rounded-full" style={{background:pcolor}}/></div><span className="text-xs font-bold tracking-[0.15em]" style={{color:pcolor}}>{ps}</span><span className="text-[10px]" style={{color:C.dim}}>{Math.round(ratio*100)}%</span></div></div>
+      <div className="flex gap-3"><G className="flex-1 text-center" p="py-5 px-3" glow={`${pcolor}10`}><Num value={burn} className="text-3xl font-bold" color={C.text}/><p className="text-[8px] font-bold tracking-[0.2em] mt-2" style={{color:C.dim}}>BURN / DAY</p></G><G className="flex-1 text-center" p="py-5 px-3" glow={`${pcolor}10`}><Num value={proj} className="text-3xl font-bold" color={pcolor}/><p className="text-[8px] font-bold tracking-[0.2em] mt-2" style={{color:C.dim}}>PROJECTED</p></G></div>
+      <G className="mt-3" p="px-4 py-3"><div className="flex justify-between py-1.5" style={{borderBottom:`1px solid ${C.border}`}}><span className="text-xs" style={{color:C.muted}}>Budget pace</span><span className="text-xs" style={{color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{$(pace)}/day</span></div><div className="flex justify-between py-1.5"><span className="text-xs" style={{color:C.muted}}>{surplus>=0?"Under by":"Over by"}</span><span className="text-xs font-bold" style={{color:surplus>=0?C.emerald:C.red,fontFamily:"'JetBrains Mono',monospace"}}>{$(Math.abs(surplus))}</span></div></G>
+      <div className="mt-5"><span className="text-[10px] font-bold tracking-[0.2em]" style={{color:C.dim}}>CUMULATIVE</span><G className="mt-2" p="p-3"><ResponsiveContainer width="100%" height={190}><AreaChart data={daily}><defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.blue} stopOpacity={0.2}/><stop offset="100%" stopColor={C.blue} stopOpacity={0}/></linearGradient></defs><XAxis dataKey="d" tick={{fill:C.dim,fontSize:10}} axisLine={false} tickLine={false}/><YAxis tick={{fill:C.dim,fontSize:10}} axisLine={false} tickLine={false} tickFormatter={v=>`$${v}`} width={36}/><Tooltip content={<Tip/>}/><Area type="monotone" dataKey="p" stroke={C.faint} strokeWidth={1.5} strokeDasharray="5 4" fill="none" name="Pace"/><Area type="monotone" dataKey="cum" stroke={C.blue} strokeWidth={2.5} fill="url(#cg)" name="Actual"/></AreaChart></ResponsiveContainer></G></div>
+      <div className="mt-4"><span className="text-[10px] font-bold tracking-[0.2em]" style={{color:C.dim}}>DAILY</span><G className="mt-2" p="p-3"><ResponsiveContainer width="100%" height={130}><BarChart data={daily}><XAxis dataKey="d" tick={{fill:C.dim,fontSize:10}} axisLine={false} tickLine={false}/><YAxis tick={{fill:C.dim,fontSize:10}} axisLine={false} tickLine={false} tickFormatter={v=>`$${v}`} width={36}/><Tooltip content={<Tip/>}/><Bar dataKey="v" radius={[4,4,0,0]} name="Daily">{daily.map((d,i)=><Cell key={i} fill={d.v>pace?C.red:C.blue} fillOpacity={0.7}/>)}</Bar></BarChart></ResponsiveContainer></G></div>
+    </S>
+  );
+}
+
+// ── LOANS (INTERACTIVE) ──────────────────────────────────────────────────────
+function LoansTab({data,onUpdate}) {
+  const [addOpen,setAddOpen]=useState(false);
+  const [payOpen,setPayOpen]=useState(null); // loan id
+  const [payAmt,setPayAmt]=useState("");
+  const [newLoan,setNewLoan]=useState({name:"",balance:"",rate:"",min:""});
+
+  const s=useMemo(()=>sim(data.loans,data.loanPayment),[data.loans,data.loanPayment]);
+  const total=data.loans.reduce((a,l)=>a+l.balance,0);
+  const sorted=[...data.loans].sort((a,b)=>b.rate-a.rate);
+  const mn=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const pd=m=>{const d=new Date();d.setMonth(d.getMonth()+m);return`${mn[d.getMonth()]} ${d.getFullYear()}`;};
+  const cd=s.sn.map(snap=>({m:snap.m,...snap}));
+
+  const handleAddLoan=()=>{
+    const loan={id:`l${Date.now()}`,name:newLoan.name,balance:parseFloat(newLoan.balance)||0,rate:(parseFloat(newLoan.rate)||0)/100,min:parseFloat(newLoan.min)||0};
+    if(!loan.name||!loan.balance) return;
+    onUpdate({...data,loans:[...data.loans,loan]});
+    setNewLoan({name:"",balance:"",rate:"",min:""});setAddOpen(false);
+  };
+
+  const handleRemoveLoan=(id)=>{
+    onUpdate({...data,loans:data.loans.filter(l=>l.id!==id)});
+  };
+
+  const handlePayment=()=>{
+    const amt=parseFloat(payAmt)||0;if(!amt||!payOpen) return;
+    const updated=data.loans.map(l=>l.id===payOpen?{...l,balance:Math.max(0,l.balance-amt)}:l).filter(l=>l.balance>0);
+    onUpdate({...data,loans:updated});setPayOpen(null);setPayAmt("");
+  };
+
+  return (
+    <S className="px-5 pb-10">
+      <G className="mt-5" p="p-6" glow="#ef444412">
+        <div className="flex justify-between items-start">
+          <div><span className="text-[10px] font-bold tracking-[0.2em]" style={{color:C.dim}}>TOTAL DEBT</span><div className="mt-1"><Num value={total} className="text-3xl font-bold" color={C.red}/></div></div>
+          <div className="text-right"><span className="text-[10px] font-bold tracking-[0.2em]" style={{color:C.dim}}>DEBT-FREE</span><div className="mt-1 text-2xl font-bold" style={{color:C.emerald,fontFamily:"'JetBrains Mono',monospace"}}>{s.mo>0?pd(s.mo):"—"}</div></div>
+        </div>
+        <div className="flex gap-5 mt-4 pt-4" style={{borderTop:`1px solid ${C.border}`}}>
+          {[["Payment",$(data.loanPayment),C.text],["Interest",$(s.ti),C.amber],["Months",""+s.mo,C.text]].map(([l,v,c])=>(
+            <div key={l}><p className="text-[10px]" style={{color:C.dim}}>{l}</p><p className="text-sm font-bold" style={{color:c,fontFamily:"'JetBrains Mono',monospace"}}>{v}</p></div>
+          ))}
+        </div>
+      </G>
+
+      <div className="mt-5 mb-2 flex items-center justify-between">
+        <span className="text-[10px] font-bold tracking-[0.2em]" style={{color:C.dim}}>AVALANCHE ORDER</span>
+        <button onClick={()=>setAddOpen(true)} className="text-[10px] font-bold tracking-wider px-3 py-1 rounded-full transition" style={{color:C.blue,background:`${C.blue}15`}}>+ ADD LOAN</button>
+      </div>
+
+      {sorted.map((l,i)=>{
+        const t=i===0,pm=s.pd[l.name]||s.mo;
+        return <G key={l.id||l.name} className="mb-2" p="p-4" glow={t?"#ef444410":undefined}>
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-12 rounded-full" style={{background:LC[i%LC.length]}}/>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2"><span className="text-sm font-semibold text-gray-200">{l.name}</span>{t&&<span className="text-[8px] font-bold px-2 py-0.5 rounded-full tracking-wider" style={{color:C.red,background:"rgba(239,68,68,0.1)"}}>TARGET</span>}</div>
+              <span className="text-[10px]" style={{color:C.muted}}>{(l.rate*100).toFixed(2)}% · Min {$(l.min)}</span>
+            </div>
+            <div className="text-right"><span className="text-sm font-bold text-white" style={{fontFamily:"'JetBrains Mono',monospace"}}>{$(l.balance)}</span><p className="text-[10px] font-semibold" style={{color:C.emerald}}>{pd(pm)}</p></div>
+          </div>
+          {/* Action buttons */}
+          <div className="flex gap-2 mt-3 ml-4">
+            <button onClick={()=>{setPayOpen(l.id||l.name);setPayAmt("");}} className="text-[10px] font-bold tracking-wider px-3 py-1.5 rounded-lg transition" style={{color:C.emerald,background:`${C.emerald}12`}}>MAKE PAYMENT</button>
+            <button onClick={()=>handleRemoveLoan(l.id||l.name)} className="text-[10px] font-bold tracking-wider px-3 py-1.5 rounded-lg transition" style={{color:C.red,background:`${C.red}10`}}>REMOVE</button>
+          </div>
+        </G>;
+      })}
+
+      {data.loans.length>0&&<div className="mt-4"><span className="text-[10px] font-bold tracking-[0.2em]" style={{color:C.dim}}>PAYOFF WATERFALL</span>
+        <G className="mt-2" p="p-3"><ResponsiveContainer width="100%" height={200}><AreaChart data={cd}><defs>{sorted.map((l,i)=><linearGradient key={l.name} id={`lc${i}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={LC[i%LC.length]} stopOpacity={0.45}/><stop offset="100%" stopColor={LC[i%LC.length]} stopOpacity={0.03}/></linearGradient>)}</defs><XAxis dataKey="m" tick={{fill:C.dim,fontSize:10}} axisLine={false} tickLine={false}/><YAxis tick={{fill:C.dim,fontSize:10}} axisLine={false} tickLine={false} tickFormatter={v=>`$${(v/1000).toFixed(0)}k`} width={36}/><Tooltip content={<Tip/>}/>{[...sorted].reverse().map((l,i)=><Area key={l.name} type="monotone" dataKey={l.name} stackId="1" stroke="none" fill={`url(#lc${sorted.length-1-i})`}/>)}</AreaChart></ResponsiveContainer></G>
+      </div>}
+
+      {/* Add Loan Modal */}
+      <Modal open={addOpen} onClose={()=>setAddOpen(false)} title="Add Student Loan">
+        <Input label="LOAN NAME" value={newLoan.name} onChange={v=>setNewLoan({...newLoan,name:v})} placeholder="e.g. 1-06 Direct Sub"/>
+        <Input label="CURRENT BALANCE" type="number" value={newLoan.balance} onChange={v=>setNewLoan({...newLoan,balance:v})} placeholder="5000.00"/>
+        <Input label="INTEREST RATE (%)" type="number" value={newLoan.rate} onChange={v=>setNewLoan({...newLoan,rate:v})} placeholder="4.74"/>
+        <Input label="MINIMUM PAYMENT" type="number" value={newLoan.min} onChange={v=>setNewLoan({...newLoan,min:v})} placeholder="50.00"/>
+        <Btn full onClick={handleAddLoan} className="mt-2">Add Loan</Btn>
+      </Modal>
+
+      {/* Payment Modal */}
+      <Modal open={!!payOpen} onClose={()=>setPayOpen(null)} title="Record Payment">
+        <p className="text-xs mb-3" style={{color:C.muted}}>Enter the payment amount to deduct from the loan balance. The avalanche model will recalculate automatically.</p>
+        <Input label="PAYMENT AMOUNT" type="number" value={payAmt} onChange={setPayAmt} placeholder="3450.00"/>
+        <Btn full onClick={handlePayment} color={C.emerald} className="mt-2">Apply Payment</Btn>
+      </Modal>
+    </S>
+  );
+}
+
+// ── HEALTH (INTERACTIVE) ─────────────────────────────────────────────────────
+function HealthTab({data,onUpdate}) {
+  const [addOpen,setAddOpen]=useState(false);
+  const [newItem,setNewItem]=useState({name:"",amount:""});
+
+  const tf=Object.values(data.fixed).reduce((s,v)=>s+v,0);
+  const surplus=data.monthlyIncome-tf-data.cycleTarget;
+  const ratio=(tf+data.cycleTarget)/data.monthlyIncome;
+  const pie=[{n:"Fixed",v:tf,c:C.red},{n:"Variable",v:data.cycleTarget,c:C.blue},{n:"Surplus",v:Math.max(surplus,0),c:C.emerald}];
+
+  const handleAdd=()=>{
+    if(!newItem.name||!newItem.amount) return;
+    const updated={...data,fixed:{...data.fixed,[newItem.name]:parseFloat(newItem.amount)||0}};
+    onUpdate(updated);setNewItem({name:"",amount:""});setAddOpen(false);
+  };
+
+  const handleRemove=(name)=>{
+    const f={...data.fixed};delete f[name];
+    onUpdate({...data,fixed:f});
+  };
+
+  return (
+    <S className="px-5 pb-10">
+      <G className="mt-5 text-center" p="p-6">
+        <span className="text-[10px] font-bold tracking-[0.2em]" style={{color:C.dim}}>NET INCOME</span>
+        <div className="mt-1"><Num value={data.monthlyIncome} className="text-4xl font-bold" color={C.text}/></div>
+        <div className="flex items-center justify-center mt-4">
+          <ResponsiveContainer width={150} height={150}><PieChart><Pie data={pie} cx="50%" cy="50%" innerRadius={48} outerRadius={68} dataKey="v" strokeWidth={0}>{pie.map((d,i)=><Cell key={i} fill={d.c}/>)}</Pie></PieChart></ResponsiveContainer>
+          <div className="ml-4 space-y-2 text-left">{pie.map((d,i)=><div key={i} className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{background:d.c}}/><span className="text-[10px]" style={{color:C.muted}}>{d.n}</span><span className="text-xs font-bold text-white" style={{fontFamily:"'JetBrains Mono',monospace"}}>{$(d.v)}</span></div>)}</div>
+        </div>
+      </G>
+
+      <G className="mt-3" p="px-4 py-1">
+        {[["Fixed obligations",$(tf),C.red,true],["Variable budget",$(data.cycleTarget),C.blue,false],["Monthly surplus",$(surplus),surplus>=0?C.emerald:C.red,true],["Commitment",pc(ratio),ratio>0.9?C.red:C.amber,false]].map(([l,v,c,b],i)=>(
+          <div key={i} className="flex justify-between py-3" style={{borderBottom:i<3?`1px solid ${C.border}`:"none"}}><span className="text-xs" style={{color:C.muted}}>{l}</span><span className={`text-xs ${b?'font-bold':''}`} style={{color:c,fontFamily:"'JetBrains Mono',monospace"}}>{v}</span></div>
+        ))}
+      </G>
+
+      <div className="mt-5 mb-2 flex items-center justify-between">
+        <span className="text-[10px] font-bold tracking-[0.2em]" style={{color:C.dim}}>OBLIGATIONS</span>
+        <button onClick={()=>setAddOpen(true)} className="text-[10px] font-bold tracking-wider px-3 py-1 rounded-full transition" style={{color:C.blue,background:`${C.blue}15`}}>+ ADD</button>
+      </div>
+      <G p="px-4 py-0">
+        {Object.entries(data.fixed).map(([n,c],i,a)=>(
+          <div key={n} className="flex items-center justify-between py-3" style={{borderBottom:i<a.length-1?`1px solid ${C.border}`:"none"}}>
+            <span className="text-xs" style={{color:C.muted}}>{n}</span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs" style={{color:C.text,fontFamily:"'JetBrains Mono',monospace"}}>{$(c)}</span>
+              <button onClick={()=>handleRemove(n)} className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] transition" style={{color:C.red,background:`${C.red}10`}}>✕</button>
+            </div>
+          </div>
+        ))}
+        <div className="flex justify-between py-3" style={{borderTop:`1px solid rgba(255,255,255,0.08)`,background:"rgba(255,255,255,0.015)",margin:"0 -16px",padding:"12px 16px"}}>
+          <span className="text-xs font-bold" style={{color:C.text}}>Total</span><span className="text-xs font-bold text-white" style={{fontFamily:"'JetBrains Mono',monospace"}}>{$(tf)}</span>
+        </div>
+      </G>
+
+      <Modal open={addOpen} onClose={()=>setAddOpen(false)} title="Add Fixed Obligation">
+        <Input label="NAME" value={newItem.name} onChange={v=>setNewItem({...newItem,name:v})} placeholder="e.g. Gym Membership"/>
+        <Input label="MONTHLY AMOUNT" type="number" value={newItem.amount} onChange={v=>setNewItem({...newItem,amount:v})} placeholder="49.99"/>
+        <Btn full onClick={handleAdd} className="mt-2">Add Obligation</Btn>
+      </Modal>
+    </S>
+  );
+}
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   APP SHELL
+   ═════════════════════════════════════════════════════════════════════════════ */
+const NAV=[
+  {id:"home",l:"Home",i:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>},
+  {id:"act",l:"Activity",i:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>},
+  {id:"vel",l:"Velocity",i:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>},
+  {id:"loan",l:"Loans",i:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>},
+  {id:"hp",l:"Health",i:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>},
+];
+
+export default function App() {
+  const [tab,setTab]=useState("home");
+  const [bal,setBal]=useState(null);
+  const [data,setData]=useState(DEFAULTS);
+  const [ready,setReady]=useState(false);
+  const [toast,setToast]=useState(null);
+  const toastTimer=useRef(null);
+
+  // Show toast for 2.5s
+  const showToast=(msg)=>{
+    setToast(msg);
+    clearTimeout(toastTimer.current);
+    toastTimer.current=setTimeout(()=>setToast(null),2500);
+  };
+
+  // Add a transaction, update balance, persist
+  const onAddTransaction=(txn)=>{
+    const newData={...data,
+      balance:(bal??data.balance)+txn.amount,
+      transactions:[txn,...data.transactions]
+    };
+    setBal(newData.balance);
+    setData(newData);
+    saveState(newData);
+    showToast(`${$(txn.amount)} · ${txn.desc} · ${txn.cat}`);
+  };
+
+  // Load persisted state, then try live data, then handle share target
+  useEffect(()=>{
+    (async()=>{
+      const saved = await loadState();
+      if(saved) setData(saved);
+      try { const r=await fetch(DATA_URL); if(r.ok){const d=await r.json();setData(d);} } catch{}
+
+      // Web Share Target — read ?text= param from URL
+      const params=new URLSearchParams(window.location.search);
+      const sharedText=params.get("text");
+      if(sharedText){
+        // Clean URL without reloading
+        window.history.replaceState({},"",window.location.pathname);
+        const parsed=parseDiscoverNotif(decodeURIComponent(sharedText));
+        if(parsed){
+          onAddTransaction(parsed);
+          setTab("home");
+        } else {
+          // Partial parse — merchant might still be useful, open quick-add
+          setTab("home");
+          showToast("Couldn't parse notification — use + to add manually");
+        }
+      }
+
+      setReady(true);
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
+
+  // Persist on changes
+  const onUpdate=(newData)=>{setData(newData);saveState(newData);};
+
+  return (
+    <div className="min-h-screen pb-24" style={{background:`linear-gradient(180deg,${C.bg},#0a0f1e)`,fontFamily:"'Poppins',sans-serif"}}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+        @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes ping{75%,100%{transform:scale(2);opacity:0}}
+        @keyframes toastIn{from{opacity:0;transform:translateY(-20px) scale(0.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+        .animate-ping{animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite}
+        *{-webkit-tap-highlight-color:transparent}::-webkit-scrollbar{display:none}
+      `}</style>
+
+      <Toast toast={toast}/>
+
+      <div className="px-5 pt-6 pb-1 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-1.5">Pulse<span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-50" style={{background:C.blue}}/><span className="relative inline-flex rounded-full h-2 w-2" style={{background:C.blue}}/></span></h1>
+          <p className="text-[10px]" style={{color:C.dim}}>Mar 15 – Apr 15 · Day {data.daysElapsed}/{data.totalDays}</p>
+        </div>
+        <div className="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-bold text-white" style={{background:`linear-gradient(135deg,${C.blue},${C.purple})`}}>KG</div>
+      </div>
+
+      <div key={tab} style={{animation:"fadeUp 0.4s ease both"}}>
+        {tab==="home"&&<Home data={data} bal={bal} setBal={setBal} onAddTransaction={onAddTransaction}/>}
+        {tab==="act"&&<Activity data={data}/>}
+        {tab==="vel"&&<Velocity data={data}/>}
+        {tab==="loan"&&<LoansTab data={data} onUpdate={onUpdate}/>}
+        {tab==="hp"&&<HealthTab data={data} onUpdate={onUpdate}/>}
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 z-50" style={{background:"rgba(5,10,20,0.9)",backdropFilter:"blur(24px)",borderTop:`1px solid ${C.border}`}}>
+        <div className="flex justify-around items-center py-1.5 max-w-lg mx-auto" style={{paddingBottom:"max(8px, env(safe-area-inset-bottom))"}}>
+          {NAV.map(n=>(
+            <button key={n.id} onClick={()=>setTab(n.id)} className="flex flex-col items-center gap-0.5 px-2 py-1 transition-all duration-200" style={{color:tab===n.id?C.blue:C.dim}}>
+              <div style={{transform:tab===n.id?"scale(1.1)":"scale(1)",transition:"transform 0.2s"}}>{n.i}</div>
+              <span className="text-[9px] font-semibold tracking-wider">{n.l}</span>
+              {tab===n.id&&<div className="w-1 h-1 rounded-full" style={{background:C.blue}}/>}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
