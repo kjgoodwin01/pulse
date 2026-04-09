@@ -285,7 +285,8 @@ function ScanModal({mode, onClose, onImport}) {
   const fileRef=useRef();
 
   const processImage=async(file)=>{
-    if(!getApiKey()){setErrorMsg("No API key set. Go to Settings → Anthropic API Key.");setStatus("error");return;}
+    if(!getApiKey()){setErrorMsg("No API key set. Tap KG → Settings → paste your Anthropic API key.");setStatus("error");return;}
+    console.log("Using key:", getApiKey().slice(0,12)+"...");
     setStatus("processing");
     try {
       const b64=await new Promise((res,rej)=>{
@@ -779,9 +780,17 @@ function SettingsTab({data,onUpdate}) {
   const [show,setShow]=useState(false);
 
   const handleSave=()=>{
-    setApiKey(key.trim());
-    setSaved(true);
-    setTimeout(()=>setSaved(false),2000);
+    const trimmed = key.trim();
+    setApiKey(trimmed);
+    // Read back immediately to verify it actually saved
+    const readBack = getApiKey();
+    if(readBack === trimmed && trimmed.length > 0) {
+      setSaved(true);
+      setTimeout(()=>setSaved(false),3000);
+    } else {
+      setSaved(false);
+      alert("Storage failed — your browser may be blocking localStorage. Try disabling private/incognito mode.");
+    }
   };
 
   return (
@@ -815,6 +824,9 @@ function SettingsTab({data,onUpdate}) {
         <Btn full onClick={handleSave} color={saved?C.emerald:C.blue}>
           {saved?"✓ Saved":"Save API Key"}
         </Btn>
+        {saved&&<p className="text-[11px] mt-2 text-center" style={{color:C.emerald}}>
+          Stored: {key.slice(0,12)}...{key.slice(-4)}
+        </p>}
         <p className="text-[10px] mt-3 text-center leading-relaxed" style={{color:C.dim}}>
           Stored on this device only. Never sent to GitHub or any server other than Anthropic's API.
         </p>
