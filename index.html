@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1.0" />
-  <meta name="theme-color" content="#050A14" />
+  <meta name="theme-color" content="#0F172A" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -21,7 +21,7 @@
   <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.10/babel.min.js"></script>
   <style>
-    html,body,#root{height:100%;margin:0;padding:0;background:#050A14;overflow-x:hidden}
+    html,body,#root{height:100%;margin:0;padding:0;background:#0F172A;overflow-x:hidden}
   </style>
 </head>
 <body>
@@ -61,7 +61,7 @@ const CYCLE_END = "2026-04-15";
 const { totalDays, daysElapsed, daysRemaining, cycleStart: CS, cycleEnd: CE } = computeCycleDays(CYCLE_START, CYCLE_END);
 
 const DEFAULTS = {
-  balance: 584.94, cycleTarget: 1000, cycleStart: CS, cycleEnd: CE,
+  balance: 584.94, checkingBalance: 0, plannedExpenses: [], cycleTarget: 1000, cycleStart: CS, cycleEnd: CE,
   daysElapsed, daysRemaining, totalDays, monthlyIncome: 4761.80, loanPayment: 3450,
   fixed: {"Student Loans":3450,"Insurance":160.75,"Phone":32.50,"Amazon Prime":15.89,"Paramount+":13.77,"ChatGPT":20,"Apple iCloud":0.99,"Microsoft 365":8.33,"Claude Pro":17},
   loans: [
@@ -87,16 +87,16 @@ const DEFAULTS = {
 
 // ── PALETTE ──────────────────────────────────────────────────────────────────
 const C = {
-  bg:"#050A14",surface:"rgba(255,255,255,0.025)",border:"rgba(255,255,255,0.05)",
-  emerald:"#34d399",amber:"#fbbf24",red:"#f87171",blue:"#3b82f6",purple:"#a855f7",cyan:"#22d3ee",
-  text:"#e2e8f0",muted:"#64748b",dim:"#334155",faint:"#1e293b",
-  cats:{Groceries:"#10b981",Dining:"#f59e0b",Gas:"#3b82f6",Entertainment:"#a855f7",Shopping:"#ec4899",Medical:"#ef4444",Other:"#64748b"},
+  bg:"#0F172A",surface:"rgba(255,255,255,0.04)",border:"rgba(255,255,255,0.07)",
+  emerald:"#2DD4BF",amber:"#fbbf24",red:"#FB7185",blue:"#2DD4BF",purple:"#a855f7",cyan:"#22d3ee",
+  text:"#e2e8f0",muted:"#94A3B8",dim:"#475569",faint:"#1e293b",
+  cats:{Groceries:"#10b981",Dining:"#f59e0b",Gas:"#2DD4BF",Entertainment:"#a855f7",Shopping:"#ec4899",Medical:"#FB7185",Other:"#94A3B8"},
 };
 const sc=(v,g,w)=>v>g?C.emerald:v>w?C.amber:C.red;
 const $=(n,d=2)=>`$${n.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d})}`;
 const $0=n=>`$${Math.round(n).toLocaleString("en-US")}`;
 const pc=n=>`${Math.round(n*100)}%`;
-const LC=["#ef4444","#f59e0b","#3b82f6","#06b6d4","#10b981","#a855f7","#ec4899"];
+const LC=["#FB7185","#f59e0b","#2DD4BF","#06b6d4","#10b981","#a855f7","#ec4899"];
 
 // ── KEYWORDS & PARSER ────────────────────────────────────────────────────────
 const KEYWORDS = {
@@ -208,7 +208,7 @@ function Modal({open,onClose,title,children}) {
   return (
     <div className="fixed inset-0 z-[100] flex items-end justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"/>
-      <div className="relative w-full max-w-lg rounded-t-3xl overflow-hidden" style={{background:"#0c1222",border:`1px solid ${C.border}`,borderBottom:"none",maxHeight:"85vh"}}
+      <div className="relative w-full max-w-lg rounded-t-3xl overflow-hidden" style={{background:"#0F172A",border:`1px solid ${C.border}`,borderBottom:"none",maxHeight:"85vh"}}
         onClick={e=>e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4" style={{borderBottom:`1px solid ${C.border}`}}>
           <span className="text-sm font-bold text-white">{title}</span>
@@ -226,14 +226,14 @@ function Toast({toast}) {
   return (
     <div className="fixed top-0 left-0 right-0 z-[200] flex justify-center pointer-events-none" style={{paddingTop:"max(16px, env(safe-area-inset-top))"}}>
       <div className="mx-4 max-w-sm w-full rounded-2xl overflow-hidden flex items-center gap-3"
-        style={{background:"rgba(15,23,42,0.97)",border:`1px solid rgba(52,211,153,0.3)`,backdropFilter:"blur(20px)",boxShadow:"0 8px 40px rgba(0,0,0,0.5)",animation:"toastIn 0.4s cubic-bezier(0.16,1,0.3,1) both"}}>
-        <div className="w-1 self-stretch flex-shrink-0" style={{background:"#34d399"}}/>
+        style={{background:"rgba(15,23,42,0.97)",border:`1px solid rgba(45,212,191,0.3)`,backdropFilter:"blur(20px)",boxShadow:"0 8px 40px rgba(0,0,0,0.5)",animation:"toastIn 0.4s cubic-bezier(0.16,1,0.3,1) both"}}>
+        <div className="w-1 self-stretch flex-shrink-0" style={{background:"#2DD4BF"}}/>
         <div className="py-3 pr-4 flex-1">
           <p className="text-xs font-bold text-white" style={{fontFamily:"'Poppins',sans-serif"}}>Transaction Added</p>
           <p className="text-[11px] mt-0.5" style={{color:"#94a3b8",fontFamily:"'JetBrains Mono',monospace"}}>{toast}</p>
         </div>
-        <div className="mr-3 w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0" style={{background:"rgba(52,211,153,0.15)"}}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+        <div className="mr-3 w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0" style={{background:"rgba(45,212,191,0.15)"}}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2DD4BF" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
       </div>
     </div>
@@ -359,7 +359,7 @@ Include ALL transactions visible, even if marked Pending. Return [] only if ther
   return (
     <div className="fixed inset-0 z-[100] flex items-end justify-center" onClick={status==="idle"?onClose:undefined}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"/>
-      <div className="relative w-full max-w-lg rounded-t-3xl overflow-hidden" style={{background:"#0c1222",border:`1px solid rgba(255,255,255,0.05)`,borderBottom:"none",maxHeight:"90vh"}}
+      <div className="relative w-full max-w-lg rounded-t-3xl overflow-hidden" style={{background:"#0F172A",border:`1px solid rgba(255,255,255,0.05)`,borderBottom:"none",maxHeight:"90vh"}}
         onClick={e=>e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4" style={{borderBottom:`1px solid rgba(255,255,255,0.05)`}}>
           <span className="text-sm font-bold text-white">{mode==="camera"?"Scan Statement":"Upload Screenshot"}</span>
@@ -449,7 +449,7 @@ Include ALL transactions visible, even if marked Pending. Return [] only if ther
 
 // ── HOME ─────────────────────────────────────────────────────────────────────
 function Home({data,onUpdate,onAddTransaction,onImportTransactions,menuOpen,setMenuOpen}) {
-  const [editing,setEditing]=useState(false);const [tmp,setTmp]=useState("");
+  const [editing,setEditing]=useState(false);const [tmp,setTmp]=useState("");const [chkEditing,setChkEditing]=useState(false);const [chkTmp,setChkTmp]=useState("");
   const [quickOpen,setQuickOpen]=useState(false);
   const [scanOpen,setScanOpen]=useState(null);
   const [quick,setQuick]=useState({amount:"",desc:"",cat:"Dining"});
@@ -465,8 +465,8 @@ function Home({data,onUpdate,onAddTransaction,onImportTransactions,menuOpen,setM
 
   return (
     <S className="px-5 pb-10">
-      <div className="flex items-center justify-between py-2">
-        <span className="text-[10px] font-bold tracking-[0.2em]" style={{color:C.dim}}>BALANCE</span>
+      <div className="flex items-center justify-between py-1.5">
+        <span className="text-[10px] font-bold tracking-[0.2em]" style={{color:C.dim}}>DISCOVER</span>
         {editing?(
           <div className="flex gap-2 items-center">
             <input type="number" step="0.01" value={tmp} onChange={e=>setTmp(e.target.value)}
@@ -477,6 +477,21 @@ function Home({data,onUpdate,onAddTransaction,onImportTransactions,menuOpen,setM
         ):(
           <button onClick={()=>{setTmp(spent.toFixed(2));setEditing(true);}} className="flex items-center gap-1 text-sm font-semibold transition" style={{color:C.blue}}>
             {$(spent)}<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="opacity-40"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+        )}
+      </div>
+      <div className="flex items-center justify-between py-1.5">
+        <span className="text-[10px] font-bold tracking-[0.2em]" style={{color:C.dim}}>CHECKING</span>
+        {chkEditing?(
+          <div className="flex gap-2 items-center">
+            <input type="number" step="0.01" value={chkTmp} onChange={e=>setChkTmp(e.target.value)}
+              onKeyDown={e=>{if(e.key==="Enter"){onUpdate({...data,checkingBalance:parseFloat(chkTmp)||0});setChkEditing(false);}if(e.key==="Escape")setChkEditing(false);}}
+              className="w-28 rounded-lg px-3 py-1.5 text-sm text-white text-right outline-none transition" style={{background:C.surface,border:`1px solid ${C.border}`}} autoFocus placeholder="0.00"/>
+            <button onClick={()=>{onUpdate({...data,checkingBalance:parseFloat(chkTmp)||0});setChkEditing(false);}} className="text-[10px] font-bold tracking-wider px-3 py-1.5 rounded-lg transition" style={{color:C.emerald,background:`${C.emerald}15`}}>SET</button>
+          </div>
+        ):(
+          <button onClick={()=>{setChkTmp((data.checkingBalance||0).toFixed(2));setChkEditing(true);}} className="flex items-center gap-1 text-sm font-semibold transition" style={{color:C.emerald}}>
+            {$(data.checkingBalance||0)}<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="opacity-40"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
         )}
       </div>
@@ -548,7 +563,7 @@ function Home({data,onUpdate,onAddTransaction,onImportTransactions,menuOpen,setM
           <label className="text-[10px] font-bold tracking-[0.15em] block mb-1.5" style={{color:C.dim}}>CATEGORY</label>
           <select value={quick.cat} onChange={e=>setQuick({...quick,cat:e.target.value})}
             className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none transition" style={{background:C.surface,border:`1px solid ${C.border}`}}>
-            {["Groceries","Dining","Gas","Entertainment","Shopping","Medical","Other"].map(c=><option key={c} value={c} style={{background:"#0c1222"}}>{c}</option>)}
+            {["Groceries","Dining","Gas","Entertainment","Shopping","Medical","Other"].map(c=><option key={c} value={c} style={{background:"#0F172A"}}>{c}</option>)}
           </select>
         </div>
         <Btn full onClick={handleQuickAdd} className="mt-2">Add Transaction</Btn>
@@ -557,12 +572,16 @@ function Home({data,onUpdate,onAddTransaction,onImportTransactions,menuOpen,setM
   );
 }
 
-// ── ACTIVITY ─────────────────────────────────────────────────────────────────
-function Activity({data}) {
+// ── SPEND (Activity + Velocity combined) ─────────────────────────────────────
+function SpendTab({data}) {
   const [q,setQ]=useState("");const txn=data.transactions;
   const fil=txn.filter(t=>(t.desc+t.cat).toLowerCase().includes(q.toLowerCase()));
   const total=txn.reduce((s,t)=>s+t.amount,0);
   const cats=useMemo(()=>{const m={};txn.forEach(t=>{m[t.cat]=(m[t.cat]||0)+t.amount;});return Object.entries(m).sort((a,b)=>b[1]-a[1]);},[txn]);
+  const burn=data.balance/data.daysElapsed;const pace=data.cycleTarget/data.totalDays;
+  const proj=burn*data.totalDays;const ratio=burn/pace;const surplus=data.cycleTarget-proj;
+  let ps,pcolor;if(ratio<=0.85){ps="UNDER";pcolor=C.emerald;}else if(ratio<=1.05){ps="ON PACE";pcolor=C.blue;}else if(ratio<=1.20){ps="WATCH";pcolor=C.amber;}else{ps="OVER";pcolor=C.red;}
+  const daily=useMemo(()=>{const m={};data.transactions.forEach(t=>{const d=parseInt(t.date.slice(-2));m[d]=(m[d]||0)+t.amount;});let cum=0;return Array.from({length:data.daysElapsed},(_,i)=>{const d=15+i;const v=m[d]||0;cum+=v;return{d:`${d}`,v,cum,p:pace*(i+1)};});},[data,pace]);
   return (
     <S className="px-5 pb-10">
       <div className="mt-4 relative">
@@ -571,19 +590,13 @@ function Activity({data}) {
       </div>
       <div className="mt-5 space-y-3">{cats.map(([cat,amt])=>(<div key={cat}><div className="flex items-center justify-between mb-1.5"><div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{background:C.cats[cat]||C.muted}}/><span className="text-xs" style={{color:C.muted}}>{cat}</span></div><div className="flex items-center gap-2"><span className="text-[10px]" style={{color:C.dim}}>{pc(amt/total)}</span><span className="text-xs font-bold text-white" style={{fontFamily:"'JetBrains Mono',monospace"}}>{$(amt)}</span></div></div><div className="h-1 rounded-full overflow-hidden" style={{background:C.faint}}><div className="h-full rounded-full transition-all duration-700" style={{width:`${(amt/total)*100}%`,background:C.cats[cat]||C.muted}}/></div></div>))}</div>
       <div className="mt-6">{fil.map((t,i)=>(<div key={i} className="flex items-center py-3" style={{borderBottom:i<fil.length-1?`1px solid ${C.border}`:"none"}}><div className="w-9 h-9 rounded-xl flex items-center justify-center mr-3" style={{background:`${C.cats[t.cat]||C.muted}12`}}><div className="w-2.5 h-2.5 rounded-full" style={{background:C.cats[t.cat]||C.muted}}/></div><div className="flex-1 min-w-0"><p className="text-sm text-gray-200 truncate">{t.desc}</p><span className="text-[10px]" style={{color:C.muted}}>{t.date.slice(5).replace("-","/")} · {t.cat}</span></div><span className="text-sm font-bold text-white" style={{fontFamily:"'JetBrains Mono',monospace"}}>{$(t.amount)}</span></div>))}</div>
-    </S>
-  );
-}
 
-// ── VELOCITY ─────────────────────────────────────────────────────────────────
-function Velocity({data}) {
-  const spent=data.balance;const burn=spent/data.daysElapsed;const pace=data.cycleTarget/data.totalDays;
-  const proj=burn*data.totalDays;const ratio=burn/pace;const surplus=data.cycleTarget-proj;
-  let ps,pcolor;if(ratio<=0.85){ps="UNDER";pcolor=C.emerald;}else if(ratio<=1.05){ps="ON PACE";pcolor=C.blue;}else if(ratio<=1.20){ps="WATCH";pcolor=C.amber;}else{ps="OVER";pcolor=C.red;}
-  const daily=useMemo(()=>{const m={};data.transactions.forEach(t=>{const d=parseInt(t.date.slice(-2));m[d]=(m[d]||0)+t.amount;});let cum=0;return Array.from({length:data.daysElapsed},(_,i)=>{const d=15+i;const v=m[d]||0;cum+=v;return{d:`${d}`,v,cum,p:pace*(i+1)};});},[data,pace]);
-  return (
-    <S className="px-5 pb-10">
-      <div className="flex justify-center mt-5 mb-4"><div className="flex items-center gap-2 px-5 py-2 rounded-full" style={{background:`${pcolor}10`,border:`1px solid ${pcolor}20`}}><div className="relative w-2.5 h-2.5"><div className="absolute inset-0 rounded-full animate-ping opacity-30" style={{background:pcolor}}/><div className="w-2.5 h-2.5 rounded-full" style={{background:pcolor}}/></div><span className="text-xs font-bold tracking-[0.15em]" style={{color:pcolor}}>{ps}</span><span className="text-[10px]" style={{color:C.dim}}>{Math.round(ratio*100)}%</span></div></div>
+      <div className="mt-8 mb-4 flex items-center gap-3">
+        <div className="h-px flex-1" style={{background:C.border}}/>
+        <span className="text-[10px] font-bold tracking-[0.2em]" style={{color:C.dim}}>VELOCITY</span>
+        <div className="h-px flex-1" style={{background:C.border}}/>
+      </div>
+      <div className="flex justify-center mb-4"><div className="flex items-center gap-2 px-5 py-2 rounded-full" style={{background:`${pcolor}10`,border:`1px solid ${pcolor}20`}}><div className="relative w-2.5 h-2.5"><div className="absolute inset-0 rounded-full animate-ping opacity-30" style={{background:pcolor}}/><div className="w-2.5 h-2.5 rounded-full" style={{background:pcolor}}/></div><span className="text-xs font-bold tracking-[0.15em]" style={{color:pcolor}}>{ps}</span><span className="text-[10px]" style={{color:C.dim}}>{Math.round(ratio*100)}%</span></div></div>
       <div className="flex gap-3"><G className="flex-1 text-center" p="py-5 px-3" glow={`${pcolor}10`}><Num value={burn} className="text-3xl font-bold" color={C.text}/><p className="text-[8px] font-bold tracking-[0.2em] mt-2" style={{color:C.dim}}>BURN / DAY</p></G><G className="flex-1 text-center" p="py-5 px-3" glow={`${pcolor}10`}><Num value={proj} className="text-3xl font-bold" color={pcolor}/><p className="text-[8px] font-bold tracking-[0.2em] mt-2" style={{color:C.dim}}>PROJECTED</p></G></div>
       <G className="mt-3" p="px-4 py-3"><div className="flex justify-between py-1.5" style={{borderBottom:`1px solid ${C.border}`}}><span className="text-xs" style={{color:C.muted}}>Budget pace</span><span className="text-xs" style={{color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{$(pace)}/day</span></div><div className="flex justify-between py-1.5"><span className="text-xs" style={{color:C.muted}}>{surplus>=0?"Under by":"Over by"}</span><span className="text-xs font-bold" style={{color:surplus>=0?C.emerald:C.red,fontFamily:"'JetBrains Mono',monospace"}}>{$(Math.abs(surplus))}</span></div></G>
       <div className="mt-5"><span className="text-[10px] font-bold tracking-[0.2em]" style={{color:C.dim}}>CUMULATIVE</span><G className="mt-2" p="p-3"><ResponsiveContainer width="100%" height={190}><AreaChart data={daily}><defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.blue} stopOpacity={0.2}/><stop offset="100%" stopColor={C.blue} stopOpacity={0}/></linearGradient></defs><XAxis dataKey="d" tick={{fill:C.dim,fontSize:10}} axisLine={false} tickLine={false}/><YAxis tick={{fill:C.dim,fontSize:10}} axisLine={false} tickLine={false} tickFormatter={v=>`$${v}`} width={36}/><Tooltip content={<Tip/>}/><Area type="monotone" dataKey="p" stroke={C.faint} strokeWidth={1.5} strokeDasharray="5 4" fill="none" name="Pace"/><Area type="monotone" dataKey="cum" stroke={C.blue} strokeWidth={2.5} fill="url(#cg)" name="Actual"/></AreaChart></ResponsiveContainer></G></div>
@@ -750,15 +763,218 @@ function HealthTab({data,onUpdate}) {
   );
 }
 
+// ── PLAN (Simulator + AI Advisor) ────────────────────────────────────────────
+function PlanTab({data,onUpdate}) {
+  const [addOpen,setAddOpen]=useState(false);
+  const [newExp,setNewExp]=useState({desc:"",amount:"",date:"",cat:"Other"});
+  const [messages,setMessages]=useState([]);
+  const [input,setInput]=useState("");
+  const [aiLoading,setAiLoading]=useState(false);
+  const messagesEndRef=useRef();
+
+  const planned=data.plannedExpenses||[];
+  const totalPlanned=planned.reduce((s,e)=>s+e.amount,0);
+  const projChecking=(data.checkingBalance||0)-totalPlanned;
+  const budgetRemaining=Math.max(0,data.cycleTarget-data.balance);
+  const projBudget=budgetRemaining-planned.filter(e=>e.date>=data.cycleStart&&e.date<=data.cycleEnd).reduce((s,e)=>s+e.amount,0);
+
+  const handleAddExpense=()=>{
+    if(!newExp.desc||!newExp.amount) return;
+    const exp={id:`p${Date.now()}`,desc:newExp.desc.toUpperCase(),amount:parseFloat(newExp.amount)||0,date:newExp.date||new Date().toISOString().split("T")[0],cat:newExp.cat};
+    onUpdate({...data,plannedExpenses:[...planned,exp]});
+    setNewExp({desc:"",amount:"",date:"",cat:"Other"});setAddOpen(false);
+  };
+
+  const handleRemove=(id)=>onUpdate({...data,plannedExpenses:planned.filter(e=>e.id!==id)});
+
+  const buildContext=()=>{
+    const tf=Object.values(data.fixed).reduce((s,v)=>s+v,0);
+    const surplus=data.monthlyIncome-tf-data.cycleTarget;
+    const totalDebt=data.loans.reduce((s,l)=>s+l.balance,0);
+    const burn=data.balance/data.daysElapsed;
+    const proj=burn*data.totalDays;
+    return `You are a personal financial advisor. Here is the user's current financial snapshot:
+
+CASH POSITION:
+- Checking balance: ${$(data.checkingBalance||0)}
+- Discover card spent this cycle: ${$(data.balance)} of ${$(data.cycleTarget)} budget (${data.daysRemaining} days left)
+- Remaining budget this cycle: ${$(budgetRemaining)}
+- Burn rate: ${$(burn)}/day vs ${$(data.cycleTarget/data.totalDays)}/day pace
+- Projected cycle total: ${$(proj)} (${proj>data.cycleTarget?"OVER":"under"} budget)
+
+MONTHLY INCOME & OBLIGATIONS:
+- Income: ${$(data.monthlyIncome)}
+- Fixed obligations: ${$(tf)} | Variable budget: ${$(data.cycleTarget)} | Surplus: ${$(surplus)}
+
+STUDENT LOANS (Total: ${$(totalDebt)}):
+${data.loans.map(l=>`- ${l.name}: ${$(l.balance)} at ${(l.rate*100).toFixed(2)}% (min ${$(l.min)})`).join("\n")}
+
+PLANNED UPCOMING EXPENSES:
+${planned.length>0?planned.map(e=>`- ${e.desc}: ${$(e.amount)} on ${e.date} [${e.cat}]`).join("\n"):"None"}
+Projected checking after planned expenses: ${$(projChecking)}
+
+RECENT TRANSACTIONS (last ${Math.min(data.transactions.length,8)}):
+${data.transactions.slice(0,8).map(t=>`- ${t.date}: ${t.desc} ${$(t.amount)} [${t.cat}]`).join("\n")}
+
+Be direct, specific, and reference their actual numbers. Keep responses concise and actionable.`;
+  };
+
+  const sendMessage=async(userMsg)=>{
+    if(!userMsg.trim()) return;
+    if(!getApiKey()){setMessages(m=>[...m,{role:"assistant",content:"No API key set. Tap the KG button → Settings and paste your Anthropic API key."}]);return;}
+    const newMessages=[...messages,{role:"user",content:userMsg}];
+    setMessages(newMessages);setInput("");setAiLoading(true);
+    try {
+      const resp=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","x-api-key":getApiKey(),"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1024,system:buildContext(),messages:newMessages.map(m=>({role:m.role,content:m.content}))})
+      });
+      if(!resp.ok) throw new Error(`API error ${resp.status}`);
+      const d=await resp.json();
+      setMessages(m=>[...m,{role:"assistant",content:d.content?.[0]?.text||"Sorry, couldn't generate a response."}]);
+    } catch(e) {
+      setMessages(m=>[...m,{role:"assistant",content:`Error: ${e.message}`}]);
+    } finally {setAiLoading(false);}
+  };
+
+  useEffect(()=>{messagesEndRef.current?.scrollIntoView({behavior:"smooth"});},[messages,aiLoading]);
+
+  const QUICK=[
+    "How am I doing overall?",
+    "Can I afford a big purchase this month?",
+    "How should I prioritize my loans?",
+    "Help me plan next month's budget",
+  ];
+
+  return (
+    <S className="px-5 pb-10">
+      {/* Projected Position */}
+      <G className="mt-5" p="p-5">
+        <span className="text-[10px] font-bold tracking-[0.2em]" style={{color:C.dim}}>PROJECTED POSITION</span>
+        <div className="flex gap-3 mt-3">
+          <div className="flex-1 text-center p-3 rounded-xl" style={{background:"rgba(255,255,255,0.03)"}}>
+            <Num value={data.checkingBalance||0} className="text-xl font-bold" color={C.text}/>
+            <p className="text-[8px] font-bold tracking-[0.15em] mt-1" style={{color:C.dim}}>CHECKING</p>
+          </div>
+          <div className="flex-1 text-center p-3 rounded-xl" style={{background:"rgba(255,255,255,0.03)"}}>
+            <Num value={totalPlanned} className="text-xl font-bold" color={totalPlanned>0?C.amber:C.muted}/>
+            <p className="text-[8px] font-bold tracking-[0.15em] mt-1" style={{color:C.dim}}>PLANNED OUT</p>
+          </div>
+          <div className="flex-1 text-center p-3 rounded-xl" style={{background:"rgba(255,255,255,0.03)"}}>
+            <Num value={projChecking} className="text-xl font-bold" color={projChecking<0?C.red:C.emerald}/>
+            <p className="text-[8px] font-bold tracking-[0.15em] mt-1" style={{color:C.dim}}>AFTER PLANNED</p>
+          </div>
+        </div>
+      </G>
+
+      {/* Planned Expenses */}
+      <div className="mt-5 mb-2 flex items-center justify-between">
+        <span className="text-[10px] font-bold tracking-[0.2em]" style={{color:C.dim}}>UPCOMING EXPENSES</span>
+        <button onClick={()=>setAddOpen(true)} className="text-[10px] font-bold tracking-wider px-3 py-1 rounded-full transition" style={{color:C.blue,background:`${C.blue}15`}}>+ ADD</button>
+      </div>
+      {planned.length===0?(
+        <G p="p-5"><p className="text-xs text-center" style={{color:C.muted}}>No planned expenses yet. Add upcoming bills, purchases, or goals to see their impact.</p></G>
+      ):(
+        <G p="px-4 py-0">
+          {planned.map((e,i)=>(
+            <div key={e.id} className="flex items-center py-3" style={{borderBottom:i<planned.length-1?`1px solid ${C.border}`:"none"}}>
+              <div className="w-2 h-2 rounded-full mr-3 flex-shrink-0" style={{background:C.cats[e.cat]||C.amber}}/>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-gray-200 truncate">{e.desc}</p>
+                <p className="text-[10px]" style={{color:C.muted}}>{e.cat} · {e.date}</p>
+              </div>
+              <span className="text-sm font-bold text-white mr-3" style={{fontFamily:"'JetBrains Mono',monospace"}}>{$(e.amount)}</span>
+              <button onClick={()=>handleRemove(e.id)} className="w-5 h-5 rounded-full flex items-center justify-center text-[10px]" style={{color:C.red,background:`${C.red}10`}}>✕</button>
+            </div>
+          ))}
+          <div className="flex justify-between py-3" style={{borderTop:`1px solid rgba(255,255,255,0.08)`,margin:"0 -16px",padding:"12px 16px",background:"rgba(255,255,255,0.015)"}}>
+            <span className="text-xs font-bold" style={{color:C.text}}>Total planned</span>
+            <span className="text-xs font-bold" style={{color:C.amber,fontFamily:"'JetBrains Mono',monospace"}}>{$(totalPlanned)}</span>
+          </div>
+        </G>
+      )}
+
+      {/* AI Advisor */}
+      <div className="mt-6 mb-3 flex items-center gap-2">
+        <div className="relative w-2 h-2"><div className="absolute inset-0 rounded-full animate-ping opacity-40" style={{background:C.purple}}/><div className="w-2 h-2 rounded-full" style={{background:C.purple}}/></div>
+        <span className="text-[10px] font-bold tracking-[0.2em]" style={{color:C.dim}}>AI ADVISOR</span>
+      </div>
+
+      {messages.length===0&&(
+        <div className="flex flex-col gap-2 mb-4">
+          {QUICK.map(p=>(
+            <button key={p} onClick={()=>sendMessage(p)} className="text-left text-[12px] px-4 py-3 rounded-xl transition active:scale-[0.98]"
+              style={{background:C.surface,border:`1px solid ${C.border}`,color:C.text}}>{p}</button>
+          ))}
+        </div>
+      )}
+
+      {messages.length>0&&(
+        <G p="p-4" className="mb-3">
+          <div className="space-y-4 max-h-96 overflow-y-auto">
+            {messages.map((m,i)=>(
+              <div key={i} className={`flex ${m.role==="user"?"justify-end":"justify-start"}`}>
+                <div className="max-w-[88%] rounded-2xl px-4 py-3 text-xs leading-relaxed"
+                  style={{background:m.role==="user"?`${C.blue}20`:"rgba(255,255,255,0.04)",border:`1px solid ${m.role==="user"?`${C.blue}30`:C.border}`,color:m.role==="user"?C.blue:C.text,whiteSpace:"pre-wrap",fontFamily:m.role==="user"?undefined:"'JetBrains Mono',monospace",fontSize:"11px"}}>
+                  {m.content}
+                </div>
+              </div>
+            ))}
+            {aiLoading&&(
+              <div className="flex justify-start">
+                <div className="rounded-2xl px-4 py-3" style={{background:"rgba(255,255,255,0.04)",border:`1px solid ${C.border}`}}>
+                  <div className="flex gap-1.5 items-center">
+                    {[0,1,2].map(i=><div key={i} className="w-1.5 h-1.5 rounded-full" style={{background:C.purple,animation:`fadeUp 1s ${i*0.15}s ease-in-out infinite alternate`}}/>)}
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef}/>
+          </div>
+        </G>
+      )}
+
+      <div className="flex gap-2">
+        <input value={input} onChange={e=>setInput(e.target.value)}
+          onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMessage(input);}}}
+          placeholder="Ask your advisor anything..."
+          className="flex-1 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 outline-none"
+          style={{background:C.surface,border:`1px solid ${C.border}`}}/>
+        <button onClick={()=>sendMessage(input)} disabled={!input.trim()||aiLoading}
+          className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition active:scale-95 disabled:opacity-40"
+          style={{background:`linear-gradient(135deg,${C.blue},${C.purple})`}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+      {messages.length>0&&<button onClick={()=>setMessages([])} className="w-full mt-2 py-2 text-[11px]" style={{color:C.muted}}>Clear conversation</button>}
+
+      <Modal open={addOpen} onClose={()=>setAddOpen(false)} title="Add Planned Expense">
+        <Input label="DESCRIPTION" value={newExp.desc} onChange={v=>setNewExp({...newExp,desc:v,cat:autoCat(v)})} placeholder="New tires, dentist bill…"/>
+        <Input label="AMOUNT" type="number" value={newExp.amount} onChange={v=>setNewExp({...newExp,amount:v})} placeholder="350.00"/>
+        <Input label="DATE" type="date" value={newExp.date} onChange={v=>setNewExp({...newExp,date:v})}/>
+        <div className="mb-3">
+          <label className="text-[10px] font-bold tracking-[0.15em] block mb-1.5" style={{color:C.dim}}>CATEGORY</label>
+          <select value={newExp.cat} onChange={e=>setNewExp({...newExp,cat:e.target.value})}
+            className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none" style={{background:C.surface,border:`1px solid ${C.border}`}}>
+            {["Groceries","Dining","Gas","Entertainment","Shopping","Medical","Other"].map(c=><option key={c} value={c} style={{background:"#0F172A"}}>{c}</option>)}
+          </select>
+        </div>
+        <Btn full onClick={handleAddExpense} className="mt-2">Add Expense</Btn>
+      </Modal>
+    </S>
+  );
+}
+
 /* ═════════════════════════════════════════════════════════════════════════════
    APP SHELL
    ═════════════════════════════════════════════════════════════════════════════ */
 const NAV=[
   {id:"home",l:"Home",i:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>},
-  {id:"act",l:"Activity",i:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>},
-  {id:"vel",l:"Velocity",i:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>},
+  {id:"spend",l:"Spend",i:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>},
   {id:"loan",l:"Loans",i:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>},
   {id:"hp",l:"Health",i:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>},
+  {id:"plan",l:"Plan",i:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>},
 ];
 
 // ── API KEY HELPERS ───────────────────────────────────────────────────────────
@@ -851,6 +1067,8 @@ function App() {
   const [toast,setToast]=useState(null);
   const [settingsOpen,setSettingsOpen]=useState(false);
   const [menuOpen,setMenuOpen]=useState(false);
+  const [updateReady,setUpdateReady]=useState(false);
+  const waitingSW=useRef(null);
   const toastTimer=useRef(null);
 
   const showToast=(msg)=>{
@@ -858,6 +1076,16 @@ function App() {
     clearTimeout(toastTimer.current);
     toastTimer.current=setTimeout(()=>setToast(null),2500);
   };
+
+  const handleUpdate=()=>{
+    if(waitingSW.current) waitingSW.current.postMessage('SKIP_WAITING');
+  };
+
+  useEffect(()=>{
+    const handler=(e)=>{waitingSW.current=e.detail;setUpdateReady(true);};
+    window.addEventListener('swUpdateReady',handler);
+    return()=>window.removeEventListener('swUpdateReady',handler);
+  },[]);
 
   const onUpdate=(newData)=>{setData(newData);saveState(newData);};
 
@@ -918,7 +1146,7 @@ function App() {
   // Persist on changes — handled by onUpdate above
 
   return (
-    <div className="min-h-screen pb-24" style={{background:`linear-gradient(180deg,${C.bg},#0a0f1e)`,fontFamily:"'Poppins',sans-serif"}}>
+    <div className="min-h-screen pb-24" style={{background:`linear-gradient(180deg,${C.bg},#0c1628)`,fontFamily:"'Poppins',sans-serif"}}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
         @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
@@ -930,6 +1158,20 @@ function App() {
       `}</style>
 
       <Toast toast={toast}/>
+
+      {updateReady&&(
+        <div className="fixed top-0 left-0 right-0 z-[300] flex justify-center pointer-events-none" style={{paddingTop:"max(16px, env(safe-area-inset-top))"}}>
+          <div className="mx-4 max-w-sm w-full rounded-2xl overflow-hidden flex items-center gap-3 pointer-events-auto"
+            style={{background:"rgba(15,23,42,0.97)",border:`1px solid ${C.emerald}40`,backdropFilter:"blur(20px)",boxShadow:`0 8px 40px rgba(0,0,0,0.6)`,animation:"toastIn 0.4s cubic-bezier(0.16,1,0.3,1) both"}}>
+            <div className="w-1 self-stretch flex-shrink-0" style={{background:C.emerald}}/>
+            <div className="py-3 flex-1">
+              <p className="text-xs font-bold text-white">Update Available</p>
+              <p className="text-[11px] mt-0.5" style={{color:C.muted}}>A new version of Pulse is ready</p>
+            </div>
+            <button onClick={handleUpdate} className="mr-3 px-4 py-2 rounded-xl text-[11px] font-bold transition active:scale-95" style={{background:C.emerald,color:C.bg}}>Restart</button>
+          </div>
+        </div>
+      )}
 
       <div className="safe-top px-5 pb-1 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -987,10 +1229,10 @@ function App() {
 
       <div key={tab} style={{animation:"fadeUp 0.4s ease both"}}>
         {tab==="home"&&<Home data={data} onUpdate={onUpdate} onAddTransaction={onAddTransaction} onImportTransactions={onImportTransactions} menuOpen={menuOpen} setMenuOpen={setMenuOpen}/>}
-        {tab==="act"&&<Activity data={data}/>}
-        {tab==="vel"&&<Velocity data={data}/>}
+        {tab==="spend"&&<SpendTab data={data}/>}
         {tab==="loan"&&<LoansTab data={data} onUpdate={onUpdate}/>}
         {tab==="hp"&&<HealthTab data={data} onUpdate={onUpdate}/>}
+        {tab==="plan"&&<PlanTab data={data} onUpdate={onUpdate}/>}
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 z-50" style={{background:"rgba(5,10,20,0.95)",backdropFilter:"blur(24px)",borderTop:`1px solid ${C.border}`}}>
@@ -1021,19 +1263,18 @@ function App() {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/pulse/sw.js').then(reg => {
-          // Check for updates every time the app loads
           reg.update();
-          // When a new SW is waiting, activate it immediately and reload
           reg.addEventListener('updatefound', () => {
             const newSW = reg.installing;
             newSW.addEventListener('statechange', () => {
+              // When a new SW is ready and waiting, notify React instead of auto-activating
               if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
-                newSW.postMessage('SKIP_WAITING');
+                window.dispatchEvent(new CustomEvent('swUpdateReady', { detail: newSW }));
               }
             });
           });
         }).catch(() => {});
-        // Reload once the new SW takes control
+        // Reload once the new SW takes control (triggered by Restart button)
         navigator.serviceWorker.addEventListener('controllerchange', () => {
           window.location.reload();
         });
