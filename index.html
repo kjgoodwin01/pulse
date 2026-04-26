@@ -1240,7 +1240,7 @@ function App() {
       </div>
 
       {/* ── NAV (fixed height, never scrolls) */}
-      <div className="flex-shrink-0 relative" style={{background:"rgba(15,23,42,0.98)",backdropFilter:"blur(24px)",borderTop:`1px solid ${C.border}`,paddingBottom:"0px"}}>
+      <div className="flex-shrink-0 relative" style={{background:"rgba(15,23,42,0.98)",backdropFilter:"blur(24px)",borderTop:`1px solid ${C.border}`,paddingBottom:"calc(env(safe-area-inset-bottom) - 35px)"}}>
         {/* Floating + button centered above nav */}
         <button onClick={()=>setMenuOpen(true)}
           className="absolute w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-95"
@@ -1251,7 +1251,7 @@ function App() {
           {NAV.map(n=>(
             <button key={n.id} onClick={()=>setTab(n.id)} className="flex flex-col items-center gap-0 px-3 transition-all duration-200" style={{color:tab===n.id?C.blue:C.dim}}>
               <div style={{transform:tab===n.id?"scale(1.12)":"scale(1)",transition:"transform 0.2s"}}>
-                {React.cloneElement(n.i,{width:20,height:20})}
+                {React.cloneElement(n.i,{width:22,height:22})}
               </div>
               {tab===n.id&&<span style={{fontSize:"8px",fontWeight:"700",letterSpacing:"0.08em",color:C.blue}}>{n.l}</span>}
             </button>
