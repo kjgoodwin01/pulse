@@ -1251,7 +1251,7 @@ function App() {
           {NAV.map(n=>(
             <button key={n.id} onClick={()=>setTab(n.id)} className="flex flex-col items-center gap-0 px-3 transition-all duration-200" style={{color:tab===n.id?C.blue:C.dim}}>
               <div style={{transform:tab===n.id?"scale(1.12)":"scale(1)",transition:"transform 0.2s"}}>
-                {React.cloneElement(n.i,{width:22,height:22})}
+                {React.cloneElement(n.i,{width:25,height:25})}
               </div>
               {tab===n.id&&<span style={{fontSize:"8px",fontWeight:"700",letterSpacing:"0.08em",color:C.blue}}>{n.l}</span>}
             </button>
