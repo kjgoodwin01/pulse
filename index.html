@@ -1178,38 +1178,20 @@ function App() {
       {/* ── HEADER (fixed height, never scrolls) */}
       <div className="safe-top px-5 pb-2 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
-          {/* P mark icon */}
-          <svg width="38" height="38" viewBox="0 0 44 44" style={{flexShrink:0}}>
+          {/* Lightning bolt icon */}
+          <svg width="36" height="36" viewBox="0 0 36 36" style={{flexShrink:0}}>
             <defs>
-              <linearGradient id="ps1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <linearGradient id="boltgrad" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="#e0e7ff"/>
-                <stop offset="30%" stopColor="#818CF8"/>
-                <stop offset="65%" stopColor="#6366F1"/>
-                <stop offset="100%" stopColor="#3730a3"/>
+                <stop offset="40%" stopColor="#818CF8"/>
+                <stop offset="100%" stopColor="#4338ca"/>
               </linearGradient>
-              <linearGradient id="pm1" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#c7d2fe"/>
-                <stop offset="100%" stopColor="#312e81"/>
-              </linearGradient>
-              <linearGradient id="pd1" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#4338ca"/>
-                <stop offset="100%" stopColor="#1e1b4b"/>
-              </linearGradient>
-              <linearGradient id="ptile" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#1e1b4b"/>
-                <stop offset="100%" stopColor="#0F172A"/>
-              </linearGradient>
+              <filter id="boltglow">
+                <feGaussianBlur stdDeviation="1.5" result="blur"/>
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
             </defs>
-            <rect width="44" height="44" rx="10" fill="url(#ptile)"/>
-            <polygon points="7,4 14,4 14,40 7,40" fill="url(#ps1)"/>
-            <polygon points="14,4 31,4 29,9 14,9" fill="url(#ps1)"/>
-            <polygon points="31,4 36,12 32,12 29,9" fill="#e0e7ff"/>
-            <polygon points="36,12 36,22 32,22 32,12" fill="url(#pm1)"/>
-            <polygon points="36,22 31,30 29,27 32,22" fill="url(#pd1)"/>
-            <polygon points="14,27 29,27 31,30 14,30" fill="url(#pd1)"/>
-            <polygon points="14,9 29,9 32,12 32,22 29,27 14,27 14,22 26,22 29,18 26,13 14,13" fill="url(#ptile)"/>
-            <line x1="7" y1="4" x2="7" y2="40" stroke="#e0e7ff" strokeWidth="1" opacity="0.7"/>
-            <line x1="7" y1="4" x2="31" y2="4" stroke="#e0e7ff" strokeWidth="1" opacity="0.6"/>
+            <polygon points="21,2 8,20 17,20 15,34 28,16 19,16" fill="url(#boltgrad)" filter="url(#boltglow)"/>
           </svg>
           <div>
             <div className="flex items-center gap-1.5">
