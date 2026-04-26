@@ -1247,9 +1247,9 @@ function App() {
           style={{left:"50%",transform:"translateX(-50%)",bottom:"calc(100% + 10px)",background:`linear-gradient(135deg,${C.blue},${C.purple})`,boxShadow:`0 0 28px -4px ${C.blue}90`,zIndex:10}}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </button>
-        <div className="flex justify-around items-center max-w-lg mx-auto py-3">
+        <div className="flex justify-around items-center max-w-lg mx-auto pt-2 pb-1">
           {NAV.map(n=>(
-            <button key={n.id} onClick={()=>setTab(n.id)} className="flex flex-col items-center gap-1 px-3 transition-all duration-200" style={{color:tab===n.id?C.blue:C.dim}}>
+            <button key={n.id} onClick={()=>setTab(n.id)} className="flex flex-col items-center gap-0.5 px-3 transition-all duration-200" style={{color:tab===n.id?C.blue:C.dim}}>
               <div style={{transform:tab===n.id?"scale(1.12)":"scale(1)",transition:"transform 0.2s"}}>
                 {React.cloneElement(n.i,{width:22,height:22})}
               </div>
