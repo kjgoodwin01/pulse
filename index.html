@@ -858,13 +858,13 @@ Be direct, specific, and reference their actual numbers. Keep responses concise 
       <G className="mt-5" p="p-5">
         <span className="text-[10px] font-bold tracking-[0.2em]" style={{color:C.dim}}>PROJECTED POSITION</span>
         <div className="flex gap-3 mt-3">
-          <div className="flex-1 text-center p-4 rounded-xl" style={{background:"rgba(255,255,255,0.03)"}}>
-            <Num value={data.checkingBalance||0} className="text-2xl font-bold" color={C.text}/>
-            <p className="text-[9px] font-bold tracking-[0.15em] mt-1.5" style={{color:C.dim}}>CHECKING NOW</p>
+          <div className="flex-1 text-center py-3 rounded-xl" style={{background:"rgba(255,255,255,0.03)"}}>
+            <Num value={data.checkingBalance||0} className="text-xl font-bold" color={C.text}/>
+            <p className="text-[9px] font-bold tracking-[0.15em] mt-1" style={{color:C.dim}}>CHECKING NOW</p>
           </div>
-          <div className="flex-1 text-center p-4 rounded-xl" style={{background:"rgba(255,255,255,0.03)"}}>
-            <Num value={projChecking} className="text-2xl font-bold" color={projChecking<0?C.red:C.emerald}/>
-            <p className="text-[9px] font-bold tracking-[0.15em] mt-1.5" style={{color:C.dim}}>AFTER PLANNED</p>
+          <div className="flex-1 text-center py-3 rounded-xl" style={{background:"rgba(255,255,255,0.03)"}}>
+            <Num value={projChecking} className="text-xl font-bold" color={projChecking<0?C.red:C.emerald}/>
+            <p className="text-[9px] font-bold tracking-[0.15em] mt-1" style={{color:C.dim}}>AFTER PLANNED</p>
             {totalPlanned>0&&<p className="text-[9px] mt-0.5" style={{color:C.amber}}>−{$(totalPlanned)} out</p>}
           </div>
         </div>
@@ -1240,7 +1240,7 @@ function App() {
       </div>
 
       {/* ── NAV (fixed height, never scrolls) */}
-      <div className="flex-shrink-0 relative" style={{background:"rgba(15,23,42,0.98)",backdropFilter:"blur(24px)",borderTop:`1px solid ${C.border}`,paddingBottom:"max(8px, env(safe-area-inset-bottom))"}}>
+      <div className="flex-shrink-0 relative" style={{background:"rgba(15,23,42,0.98)",backdropFilter:"blur(24px)",borderTop:`1px solid ${C.border}`,paddingBottom:"max(8px, calc(env(safe-area-inset-bottom) - 35px))"}}>
         {/* Floating + button centered above nav */}
         <button onClick={()=>setMenuOpen(true)}
           className="absolute w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-95"
